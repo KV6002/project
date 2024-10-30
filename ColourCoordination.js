@@ -1,40 +1,75 @@
-function getVaccinationInformationColour(Vaccinations){
-if (Vaccinations<10000)
+function getVaccinationMonthlyInformationColour(VaccinationsMonthly){
+if (VaccinationsMonthly<50000)
 {
-    return lightRed;
+    return blue;
 }
-else if (Vaccinations >=10000 && Vaccinations<=99999)
-{
-    return DarkerRed;
-}
-else if (Vaccinations >=100000 && Vaccinations <=999999)
-{return red;
-
-}
-else if (Vaccinations >=1000000)
-{return blue;
-
-}
-}
-
-function getCasesInformationColour(Cases){
-if cases 
-}
-function getDeathInformationColour(Deaths){
-if (Deaths<100)
-{
-    return lightRed;
-
-}
-else if(Deaths>=101 && Deaths <=999)
-{
-    return DarkerRed;
-}
-else if(Deaths>=1000 && Deaths <=4999)
+else if (VaccinationsMonthly >=50000 && VaccinationsMonthly<=499999)
 {
     return red;
 }
-else if (Deaths>=5000){
+else if (VaccinationsMonthly >=500000 && VaccinationsMonthly <=1500000)
+{return DarkerRed;
+
+}
+else if (VaccinationsMonthly >=1500000)
+{
+    return lightRed;
+
+}
+}
+//function getVaccinationWeeklyInformationColour(VaccinationWeekly){
+    if (VaccinationWeekly<50000)
+        {
+            return blue;
+        }
+        else if (VaccinationWeekly >=50000 && VaccinationWeekly<=499999)
+        {
+            return red;
+        }
+        else if (VaccinationWeekly >=500000 && VaccinationWeekly <=1500000)
+        {return DarkerRed;
+        
+        }
+        else if (VaccinationWeekly >=1500000)
+        {
+            return lightRed;
+        
+        }
+        // }
+// }
+
+function getCasesMonthlyInformationColour(Cases){
+    if (Cases<100)
+        {
+            return lightRed;
+        
+        }
+        else if(Cases>=101 && Cases <=999)
+        {
+            return DarkerRed;
+        }
+        else if(Cases>=1000 && Cases <=4999)
+        {
+            return red;
+        }
+        else if (Cases>=5000){
+            return blue;0} 
+}
+function getDeathMonthlyInformationColour(DeathsMonthly){
+if (DeathsMonthly<100)
+{
+    return lightRed;
+
+}
+else if(DeathsMonthly>=101 && DeathsMonthly <=999)
+{
+    return DarkerRed;
+}
+else if(DeathsMonthly>=1000 && DeathsMonthly <=4999)
+{
+    return red;
+}
+else if (DeathsMonthly>=5000){
     return blue;
 }
 
