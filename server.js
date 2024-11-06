@@ -50,8 +50,8 @@ const PORT = process.env.PORT || 3000;
         });
 
         // Define API route for COVID-19 vaccinations data
-        app.get('/api/covid-vaccinations', async (req, res) => {
-            try {
+        app.get('/api/covid-vaccines', async (req, res) => {
+            try {   
                 const vaccinationsData = await vaccinationsCollection.find({}).toArray();
                 console.log("Vaccinations Data:", vaccinationsData); // Log for debugging
                 res.json(vaccinationsData);
