@@ -1,18 +1,76 @@
-const client = require("./db");
+const express = require('express');
+const client = require('./db'); // Make sure db.js exports MongoDB client
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 (async () => {
-    const covidDb = client.db("covid");
-    const cases = covidDb.collection("vaccines");  
-  
-    // Print a message if no documents were found
-    if ((await cases.countDocuments({})) === 0) {
-      console.log("No documents found!");
+    try {
+        // Connect to MongoDB and select the covid database
+        await client.connect();
+        console.log("Connected to MongoDB");
+
+        const covidDb = client.db("covid");
+        const casesCollection = covidDb.collection("cases");
+        const deathsCollection = covidDb.collection("deaths");
+        const vaccinationsCollection = covidDb.collection("vaccines");
+
+        // Check if each collection has documents, log a message if it's empty
+        if ((await casesCollection.countDocuments({})) === 0) {
+            console.log("No documents found in cases collection!");
+        }
+        if ((await deathsCollection.countDocuments({})) === 0) {
+            console.log("No documents found in deaths collection!");
+        }
+        if ((await vaccinationsCollection.countDocuments({})) === 0) {
+            console.log("No documents found in vaccinations collection!");
+        }
+
+        //API route for COVID-19 cases datanode 
+        app.get('/api/covid-cases', async (req, res) => {
+            try {
+                const data = await casesCollection.find({}, {
+                    projection: { latitude: 1, longitude: 1, intensity: 1 }
+                }).toArray();
+                res.json(data);
+            } catch (error) {
+                console.error("Error fetching COVID-19 cases:", error);
+                res.status(500).send("Internal Server Error");
+            }
+        });
+
+        //API route for COVID-19 deaths data
+        app.get('/api/covid-deaths', async (req, res) => {
+            try {
+                const data = await deathsCollection.find({}, {
+                    projection: { latitude: 1, longitude: 1, intensity: 1 }
+                }).toArray();
+                res.json(data);
+            } catch (error) {
+                console.error("Error fetching COVID-19 deaths:", error);
+                res.status(500).send("Internal Server Error");
+            }
+        });
+
+        //API route for COVID-19 vaccinations data
+        app.get('/api/covid-vaccinations', async (req, res) => {
+            try {
+                const data = await vaccinationsCollection.find({}, {
+                    projection: { latitude: 1, longitude: 1, intensity: 1 }
+                }).toArray();
+                res.json(data);
+            } catch (error) {
+                console.error("Error fetching COVID-19 vaccinations:", error);
+                res.status(500).send("Internal Server Error");
+            }
+        });
+
+        // Start the server
+        app.listen(PORT, () => {
+            console.log(`Server running on http://localhost:${PORT}`);
+        });
+
+    } catch (error) {
+        console.error("Error connecting to MongoDB:", error);
+        process.exit(1);
     }
-  
-    const cursor = cases.find({})
-  
-    // Print returned documents
-    for await (const doc of cursor) {
-      console.dir(doc);
-    }
-  })();
+})();
