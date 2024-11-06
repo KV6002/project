@@ -25,39 +25,36 @@ const PORT = process.env.PORT || 3000;
             console.log("No documents found in vaccinations collection!");
         }
 
-        //API route for COVID-19 cases datanode 
+        // Define API route for COVID-19 cases data
         app.get('/api/covid-cases', async (req, res) => {
             try {
-                const data = await casesCollection.find({}, {
-                    projection: { latitude: 1, longitude: 1, intensity: 1 }
-                }).toArray();
-                res.json(data);
+                const casesData = await casesCollection.find({}).toArray();
+                console.log("Cases Data:", casesData); // Log for debugging
+                res.json(casesData);
             } catch (error) {
                 console.error("Error fetching COVID-19 cases:", error);
                 res.status(500).send("Internal Server Error");
             }
         });
 
-        //API route for COVID-19 deaths data
+        // Define API route for COVID-19 deaths data
         app.get('/api/covid-deaths', async (req, res) => {
             try {
-                const data = await deathsCollection.find({}, {
-                    projection: { latitude: 1, longitude: 1, intensity: 1 }
-                }).toArray();
-                res.json(data);
+                const deathsData = await deathsCollection.find({}).toArray();
+                console.log("Deaths Data:", deathsData); // Log for debugging
+                res.json(deathsData);
             } catch (error) {
                 console.error("Error fetching COVID-19 deaths:", error);
                 res.status(500).send("Internal Server Error");
             }
         });
 
-        //API route for COVID-19 vaccinations data
+        // Define API route for COVID-19 vaccinations data
         app.get('/api/covid-vaccinations', async (req, res) => {
             try {
-                const data = await vaccinationsCollection.find({}, {
-                    projection: { latitude: 1, longitude: 1, intensity: 1 }
-                }).toArray();
-                res.json(data);
+                const vaccinationsData = await vaccinationsCollection.find({}).toArray();
+                console.log("Vaccinations Data:", vaccinationsData); // Log for debugging
+                res.json(vaccinationsData);
             } catch (error) {
                 console.error("Error fetching COVID-19 vaccinations:", error);
                 res.status(500).send("Internal Server Error");
