@@ -33,7 +33,7 @@ async function loadData() {
     });
 
     // Load vaccinations data
-    const vaccinationsResponse = await fetch('/api/covid-vaccinations');
+    const vaccinationsResponse = await fetch('/api/covid-vaccines');
     const vaccinationsData = await vaccinationsResponse.json();
     const vaccinationsPoints = vaccinationsData.map(entry => [entry.latitude, entry.longitude, entry.intensity]);
     vaccinationsLayer = L.heatLayer(vaccinationsPoints, {
@@ -53,7 +53,7 @@ filterControl.onAdd = function() {
     div.innerHTML = `
         <button onclick="showLayer('cases')">Cases</button>
         <button onclick="showLayer('deaths')">Deaths</button>
-        <button onclick="showLayer('vaccinations')">Vaccinations</button>
+        <button onclick="showLayer('vaccines')">Vaccinations</button>
     `;
     return div;
 };
@@ -71,7 +71,7 @@ function showLayer(type) {
         casesLayer.addTo(map);
     } else if (type === 'deaths' && deathsLayer) {
         deathsLayer.addTo(map);
-    } else if (type === 'vaccinations' && vaccinationsLayer) {
+    } else if (type === 'vaccines' && vaccinationsLayer) {
         vaccinationsLayer.addTo(map);
     }
 }
