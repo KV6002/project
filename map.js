@@ -1,33 +1,77 @@
-// Initialize the map
-const map = L.map('map').setView([52.3555, -1.1743], 6); // Center on England
+// Initialize the Leaflet map
+const map = L.map('map').setView([52.3555, -1.1743], 6); // Centre on UK
 
-
+// Base tile layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 18,
-  attribution: '© OpenStreetMap contributors'
+    maxZoom: 18,
+    attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// JSON data (for simplicity, added here directly)
-// Normally, you would fetch this data from an API or file
-const covidData = [
-  { region: "North East", lat: 54.9784, lon: -1.6174, positiveRate: 1.472171857 },
-  { region: "North West", lat: 53.483959, lon: -2.244644, positiveRate: 1.386623676 },
-  { region: "Yorkshire and The Humber", lat: 53.8008, lon: -1.5491, positiveRate: 1.905109439 },
-  { region: "East Midlands", lat: 52.9399, lon: -1.191, positiveRate: 1.569415041 },
-  { region: "West Midlands", lat: 52.4862, lon: -1.8904, positiveRate: 1.454135079 },
-  { region: "East of England", lat: 52.2053, lon: 0.1218, positiveRate: 1.621906061 },
-  { region: "London", lat: 51.5074, lon: -0.1278, positiveRate: 1.370345915 },
-  { region: "South East", lat: 51.317, lon: -0.149, positiveRate: 1.532320184 },
-  { region: "South West", lat: 51.4545, lon: -2.5879, positiveRate: 1.730132563 }
-];
+// Heatmap layers
+let casesLayer, deathsLayer, vaccinationsLayer;
 
-// Transform data to format suitable for Leaflet heatmap: [latitude, longitude, intensity]
-const heatmapData = covidData.map(entry => [entry.lat, entry.lon, entry.positiveRate / 2]);
+// Function to load and set up layers
+async function loadData() {
+    // Load cases data
+    const casesResponse = await fetch('/api/covid-cases');
+    const casesData = await casesResponse.json();
+    const casesPoints = casesData.map(entry => [entry.latitude, entry.longitude, entry.intensity]);
+    casesLayer = L.heatLayer(casesPoints, {
+        radius: 20,
+        blur: 15,
+        gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
+    });
 
-// Add heat layer to the map
-L.heatLayer(heatmapData, {
-  radius: 25,     // Radius of each "point" of heat
-  blur: 15,       // Blur radius
-  maxZoom: 10,    // Max zoom for heatmap layer
-  max: 1.0        // Max intensity (can be adjusted based on data)
-}).addTo(map);
+    // Load deaths data
+    const deathsResponse = await fetch('/api/covid-deaths');
+    const deathsData = await deathsResponse.json();
+    const deathsPoints = deathsData.map(entry => [entry.latitude, entry.longitude, entry.intensity]);
+    deathsLayer = L.heatLayer(deathsPoints, {
+        radius: 20,
+        blur: 15,
+        gradient: { 0.4: 'purple', 0.65: 'orange', 1: 'black' }
+    });
+
+    // Load vaccinations data
+    const vaccinationsResponse = await fetch('/api/covid-vaccinations');
+    const vaccinationsData = await vaccinationsResponse.json();
+    const vaccinationsPoints = vaccinationsData.map(entry => [entry.latitude, entry.longitude, entry.intensity]);
+    vaccinationsLayer = L.heatLayer(vaccinationsPoints, {
+        radius: 20,
+        blur: 15,
+        gradient: { 0.4: 'yellow', 0.65: 'green', 1: 'darkgreen' }
+    });
+}
+
+// Call loadData function to fetch and set up the layers
+loadData();
+
+// Filter Control: Custom control switch between layers. 
+const filterControl = L.control({position: 'topright'});
+filterControl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'filter-control');
+    div.innerHTML = `
+        <button onclick="showLayer('cases')">Cases</button>
+        <button onclick="showLayer('deaths')">Deaths</button>
+        <button onclick="showLayer('vaccinations')">Vaccinations</button>
+    `;
+    return div;
+};
+filterControl.addTo(map);
+
+// Function to show selected layer and hide others
+function showLayer(type) {
+    map.eachLayer(layer => {
+        if (layer === casesLayer || layer === deathsLayer || layer === vaccinationsLayer) {
+            map.removeLayer(layer);
+        }
+    });
+
+    if (type === 'cases' && casesLayer) {
+        casesLayer.addTo(map);
+    } else if (type === 'deaths' && deathsLayer) {
+        deathsLayer.addTo(map);
+    } else if (type === 'vaccinations' && vaccinationsLayer) {
+        vaccinationsLayer.addTo(map);
+    }
+}

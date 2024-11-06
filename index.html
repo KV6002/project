@@ -5,10 +5,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MongoDB Data Display</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
+<style>
+  #map { height: 500px; }
+  .filter-control button {
+      margin: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+      background-color: #f8f9fa;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+  }
+</style> 
 <body>
   <h1>Data from MongoDB</h1>
   <div id="data-container"></div>
+  <div id="map"></div>
+
+  <!-- Leaflet JavaScript API -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <!-- Map JavaScript Process -->
+  <script src="map.js"></script>
 
   <script>
     // Fetch and display data
