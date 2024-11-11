@@ -1,11 +1,12 @@
 const express = require('express');
-const client = require('./db'); 
+const client = require('./db');
+const NodeCache = require('node-cache');
+const cache = new NodeCache();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 (async () => {
     try {
-        
         await client.connect();
         console.log("Connected to MongoDB");
 
@@ -14,7 +15,6 @@ const PORT = process.env.PORT || 3000;
         const deathsCollection = covidDb.collection("deaths");
         const vaccinationsCollection = covidDb.collection("vaccines");
 
-       
         if ((await casesCollection.countDocuments({})) === 0) {
             console.log("No documents found in cases collection!");
         }
@@ -25,35 +25,44 @@ const PORT = process.env.PORT || 3000;
             console.log("No documents found in vaccinations collection!");
         }
 
+        const fetchData = async (collection, key) => {
+            if (cache.has(key)) {
+                return cache.get(key);
+            }
+            const data = await collection.find({}).toArray();
+            cache.set(key, data);
+            return data;
+        };
 
         app.get('/api/covid-cases', async (req, res) => {
             try {
-                const casesData = await casesCollection.find({}).toArray();
-                console.log("Cases Data:", casesData); 
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
+                const casesData = await casesCollection.find(query).toArray();
                 res.json(casesData);
             } catch (error) {
                 console.error("Error fetching COVID-19 cases:", error);
                 res.status(500).send("Internal Server Error");
             }
         });
-
-        // Define API route for COVID-19 deaths data
+        
         app.get('/api/covid-deaths', async (req, res) => {
             try {
-                const deathsData = await deathsCollection.find({}).toArray();
-                console.log("Deaths Data:", deathsData); // Log for debugging
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
+                const deathsData = await deathsCollection.find(query).toArray();
                 res.json(deathsData);
             } catch (error) {
                 console.error("Error fetching COVID-19 deaths:", error);
                 res.status(500).send("Internal Server Error");
             }
         });
-
-        // Define API route for COVID-19 vaccinations data
+        
         app.get('/api/covid-vaccines', async (req, res) => {
-            try {   
-                const vaccinationsData = await vaccinationsCollection.find({}).toArray();
-                console.log("Vaccinations Data:", vaccinationsData); // Log for debugging
+            try {
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
+                const vaccinationsData = await vaccinationsCollection.find(query).toArray();
                 res.json(vaccinationsData);
             } catch (error) {
                 console.error("Error fetching COVID-19 vaccinations:", error);
@@ -61,7 +70,6 @@ const PORT = process.env.PORT || 3000;
             }
         });
 
-        // Start the server
         app.listen(PORT, () => {
             console.log(`Server running on http://localhost:${PORT}`);
         });

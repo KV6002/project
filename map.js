@@ -12,40 +12,48 @@ let casesLayer, deathsLayer, vaccinationsLayer;
 let currentLayer = null;
 let selectedMonth = "Jan-23"; // Default month
 
+// Cache to store fetched data
+const dataCache = new Map();
+
+async function fetchData(endpoint) {
+    if (dataCache.has(endpoint)) {
+        return dataCache.get(endpoint);
+    }
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        dataCache.set(endpoint, data);
+        return data;
+    } catch (error) {
+        console.error(`Error fetching data from ${endpoint}:`, error);
+        throw error;
+    }
+}
+
 // Fetch data and load into heatmap layers
 async function loadData() {
     const endpoints = {
-        cases: `/api/covid-cases?month=${selectedMonth}`,
-        deaths: `/api/covid-deaths?month=${selectedMonth}`,
-        vaccines: `/api/covid-vaccines?month=${selectedMonth}`
+        cases: `/api/covid-cases?date=${selectedMonth}`,
+        deaths: `/api/covid-deaths?date=${selectedMonth}`,
+        vaccines: `/api/covid-vaccines?date=${selectedMonth}`
     };
 
     try {
-        // Load and create the cases layer
         const casesResponse = await fetch(endpoints.cases);
         const casesData = await casesResponse.json();
-        const casesPoints = casesData
-            .filter(item => item.coordinates)
-            .map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
+        const casesPoints = casesData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
         casesLayer = L.heatLayer(casesPoints, { radius: 20, blur: 15 });
 
-        // Load and create the deaths layer
         const deathsResponse = await fetch(endpoints.deaths);
         const deathsData = await deathsResponse.json();
-        const deathsPoints = deathsData
-            .filter(item => item.coordinates)
-            .map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
+        const deathsPoints = deathsData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
         deathsLayer = L.heatLayer(deathsPoints, { radius: 20, blur: 15 });
 
-        // Load and create the vaccinations layer
         const vaccinationsResponse = await fetch(endpoints.vaccines);
         const vaccinationsData = await vaccinationsResponse.json();
-        const vaccinationsPoints = vaccinationsData
-            .filter(item => item.coordinates)
-            .map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
+        const vaccinationsPoints = vaccinationsData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
         vaccinationsLayer = L.heatLayer(vaccinationsPoints, { radius: 20, blur: 15 });
 
-        // Show the initial layer if one is already selected
         if (currentLayer) {
             showLayer(currentLayer);
         }

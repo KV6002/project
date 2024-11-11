@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>COVID Data Map</title>
+    <title>COVID-19 Data Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
         #map { 
@@ -38,10 +38,10 @@
         <button onclick="showLayer('vaccines')">Vaccinations</button>
         
         <label for="month-slider" class="slider-label">Select Month:</label>
-        <input type="month" id="month-slider" onchange="updateMonth(this.value)" />
+        <input type="month" id="month-slider" onchange="updateMonth(this.value)" aria-label="Select Month" />
     </div>
 
-    <div id="map"></div>
+    <div id="map" aria-label="COVID-19 Data Map"></div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
