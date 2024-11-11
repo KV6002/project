@@ -5,71 +5,46 @@ import fetch from 'node-fetch';
 async function main() {
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
-    const db = client.db('covid'); 
+    const db = client.db('covid');
 
     async function getCoordinates(region) {
-        
         const cachedRegion = await db.collection('geolocations').findOne({ region });
         if (cachedRegion) return cachedRegion.coordinates;
 
-        
-        let query = region;
-        if (region !== "England" && region !== "London") {
-            query = `${region}, England`; 
-        }
-
-       
-        const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(query)}&key=${process.env.OPENCAGE_API_KEY}`);
+        const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(region)}&key=${process.env.OPENCAGE_API_KEY}`);
         const json = await response.json();
-
-        
         if (!json.results || json.results.length === 0) {
-            console.error(`No results found for region: ${query}`);
+            console.error(`No results found for region: ${region}`);
             return null;
         }
 
         const { lat, lng } = json.results[0].geometry;
-
         const coordinates = { lat, lng };
-        await db.collection('geolocations').insertOne({ region, coordinates }); // Cache coordinates
-
+        await db.collection('geolocations').insertOne({ region, coordinates });
         return coordinates;
     }
 
     async function processRegions() {
         const casesCollection = db.collection('cases');
-        
-       
-        const sampleDocument = await casesCollection.findOne();
-        console.log("Sample Document Fields:", Object.keys(sampleDocument));
+        const deathsCollection = db.collection('deaths');
+        const vaccinesCollection = db.collection('vaccines');
 
-
-        const fieldNames = Object.keys(sampleDocument);
         const regions = new Set();
 
-        fieldNames.forEach(field => {
-        
-            const cleanField = field.replace(/\n/g, " ").trim();
-            const region = cleanField.replace(/ Modelled % testing positive for COVID-19| 95% Lower credible interval for percentage| 95% Upper credible interval for percentage/g, "").trim();
-            
-            if (region && !regions.has(region) && !['_id', 'Date'].includes(region)) {
-                regions.add(region);
-            }
-        });
+        const casesRegions = await casesCollection.distinct("Area of usual residence");
+        const deathsRegions = await deathsCollection.distinct("Area of usual residence");
+        const vaccinesRegions = await vaccinesCollection.distinct("Sub-category");
 
-        console.log("Extracted Regions:", Array.from(regions));
+        casesRegions.concat(deathsRegions, vaccinesRegions).forEach(region => regions.add(region));
 
-        
-        const geocodedRegions = await Promise.all(Array.from(regions).map(async (region) => {
-            const coordinates = await getCoordinates(region);
-            if (coordinates) { 
-                return { region, coordinates };
+        await Promise.all(Array.from(regions).map(async region => {
+            if (region) {
+                const coordinates = await getCoordinates(region);
+                if (coordinates) {
+                    console.log(`Geocoded ${region}:`, coordinates);
+                }
             }
-            return null;
         }));
-
-        // Filter out null values
-        console.log("Geocoded Regions:", geocodedRegions.filter(Boolean));
     }
 
     await processRegions();
