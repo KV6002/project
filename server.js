@@ -1,11 +1,11 @@
 const express = require('express');
-const client = require('./db'); // Make sure db.js exports MongoDB client
+const client = require('./db'); 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 (async () => {
     try {
-        // Connect to MongoDB and select the covid database
+        
         await client.connect();
         console.log("Connected to MongoDB");
 
@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
         const deathsCollection = covidDb.collection("deaths");
         const vaccinationsCollection = covidDb.collection("vaccines");
 
-        // Check if each collection has documents, log a message if it's empty
+       
         if ((await casesCollection.countDocuments({})) === 0) {
             console.log("No documents found in cases collection!");
         }
@@ -25,11 +25,11 @@ const PORT = process.env.PORT || 3000;
             console.log("No documents found in vaccinations collection!");
         }
 
-        // Define API route for COVID-19 cases data
+
         app.get('/api/covid-cases', async (req, res) => {
             try {
                 const casesData = await casesCollection.find({}).toArray();
-                console.log("Cases Data:", casesData); // Log for debugging
+                console.log("Cases Data:", casesData); 
                 res.json(casesData);
             } catch (error) {
                 console.error("Error fetching COVID-19 cases:", error);
