@@ -1,75 +1,71 @@
 const express = require('express');
-const client = require('./db');
-const cors = require('cors');
+const client = require('./db'); 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // Enable CORS for all requests
-
 (async () => {
     try {
-        // Connect to MongoDB
+        
         await client.connect();
-        const db = client.db("covid");
+        console.log("Connected to MongoDB");
 
-        // Define collections
-        const casesCollection = db.collection("cases");
-        const deathsCollection = db.collection("deaths");
-        const vaccinesCollection = db.collection("vaccines");
-        const geolocationsCollection = db.collection("geolocations");
+        const covidDb = client.db("covid");
+        const casesCollection = covidDb.collection("cases");
+        const deathsCollection = covidDb.collection("deaths");
+        const vaccinationsCollection = covidDb.collection("vaccines");
 
-        // Route for COVID-19 cases
+       
+        if ((await casesCollection.countDocuments({})) === 0) {
+            console.log("No documents found in cases collection!");
+        }
+        if ((await deathsCollection.countDocuments({})) === 0) {
+            console.log("No documents found in deaths collection!");
+        }
+        if ((await vaccinationsCollection.countDocuments({})) === 0) {
+            console.log("No documents found in vaccinations collection!");
+        }
+
+
         app.get('/api/covid-cases', async (req, res) => {
             try {
-                const casesData = await casesCollection.find().toArray();
-                // Fetch and add coordinates for each case item
-                const casesWithCoordinates = await Promise.all(casesData.map(async (caseItem) => {
-                    const geoData = await geolocationsCollection.findOne({ region: caseItem["Area of usual residence"] });
-                    return { ...caseItem, coordinates: geoData ? geoData.coordinates : null };
-                }));
-                res.json(casesWithCoordinates);
+                const casesData = await casesCollection.find({}).toArray();
+                console.log("Cases Data:", casesData); 
+                res.json(casesData);
             } catch (error) {
-                console.error("Error fetching cases:", error);
-                res.status(500).json({ error: "Error fetching COVID-19 cases data" });
+                console.error("Error fetching COVID-19 cases:", error);
+                res.status(500).send("Internal Server Error");
             }
         });
 
-        // Route for COVID-19 deaths
+        // Define API route for COVID-19 deaths data
         app.get('/api/covid-deaths', async (req, res) => {
             try {
-                const deathsData = await deathsCollection.find().toArray();
-                // Fetch and add coordinates for each death item
-                const deathsWithCoordinates = await Promise.all(deathsData.map(async (deathItem) => {
-                    const geoData = await geolocationsCollection.findOne({ region: deathItem["Area of usual residence"] });
-                    return { ...deathItem, coordinates: geoData ? geoData.coordinates : null };
-                }));
-                res.json(deathsWithCoordinates);
+                const deathsData = await deathsCollection.find({}).toArray();
+                console.log("Deaths Data:", deathsData); // Log for debugging
+                res.json(deathsData);
             } catch (error) {
-                console.error("Error fetching deaths:", error);
-                res.status(500).json({ error: "Error fetching COVID-19 deaths data" });
+                console.error("Error fetching COVID-19 deaths:", error);
+                res.status(500).send("Internal Server Error");
             }
         });
 
-        // Route for COVID-19 vaccines
+        // Define API route for COVID-19 vaccinations data
         app.get('/api/covid-vaccines', async (req, res) => {
-            try {
-                const vaccinesData = await vaccinesCollection.find().toArray();
-                // Fetch and add coordinates for each vaccine item
-                const vaccinesWithCoordinates = await Promise.all(vaccinesData.map(async (vaccineItem) => {
-                    const geoData = await geolocationsCollection.findOne({ region: vaccineItem["Sub-category"] });
-                    return { ...vaccineItem, coordinates: geoData ? geoData.coordinates : null };
-                }));
-                res.json(vaccinesWithCoordinates);
+            try {   
+                const vaccinationsData = await vaccinationsCollection.find({}).toArray();
+                console.log("Vaccinations Data:", vaccinationsData); // Log for debugging
+                res.json(vaccinationsData);
             } catch (error) {
-                console.error("Error fetching vaccines:", error);
-                res.status(500).json({ error: "Error fetching COVID-19 vaccinations data" });
+                console.error("Error fetching COVID-19 vaccinations:", error);
+                res.status(500).send("Internal Server Error");
             }
         });
 
-        // Start server
+        // Start the server
         app.listen(PORT, () => {
             console.log(`Server running on http://localhost:${PORT}`);
         });
+
     } catch (error) {
         console.error("Error connecting to MongoDB:", error);
         process.exit(1);
