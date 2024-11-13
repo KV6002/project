@@ -10,10 +10,10 @@ const PORT = process.env.PORT || 3000;
         await client.connect();
         console.log("Connected to MongoDB");
 
-        const covidDb = client.db("covid");
-        const casesCollection = covidDb.collection("cases");
-        const deathsCollection = covidDb.collection("deaths");
-        const vaccinationsCollection = covidDb.collection("vaccines");
+        const covidDb = client.db("COVID-New");
+        const casesCollection = covidDb.collection("Cases");
+        const deathsCollection = covidDb.collection("Deaths");
+        const vaccinationsCollection = covidDb.collection("Vaccines");
 
         if ((await casesCollection.countDocuments({})) === 0) {
             console.log("No documents found in cases collection!");
@@ -34,7 +34,7 @@ const PORT = process.env.PORT || 3000;
             return data;
         };
 
-        app.get('/api/covid-cases', async (req, res) => {
+        app.get('/api/COVID-New-Cases', async (req, res) => {
             try {
                 const { date } = req.query;
                 const query = date ? { Date: date } : {};
@@ -46,7 +46,7 @@ const PORT = process.env.PORT || 3000;
             }
         });
         
-        app.get('/api/covid-deaths', async (req, res) => {
+        app.get('/api/COVID-NEW-Deaths', async (req, res) => {
             try {
                 const { date } = req.query;
                 const query = date ? { Date: date } : {};
@@ -58,7 +58,7 @@ const PORT = process.env.PORT || 3000;
             }
         });
         
-        app.get('/api/covid-vaccines', async (req, res) => {
+        app.get('/api/COVID-NEW-Vaccines', async (req, res) => {
             try {
                 const { date } = req.query;
                 const query = date ? { Date: date } : {};
