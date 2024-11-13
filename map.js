@@ -1,11 +1,43 @@
 // Initialize the Leaflet map
 const map = L.map('map').setView([52.3555, -1.1743], 6); // Centre on UK
 
-// Base tile layer
+var myAPIKey = "6e8dbb26e95e4992baa404893d4d2892"; // geoapify key
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
+
+// Routing
+const fromWaypoint = [52.937165, -1.045590]; // latitude, longitude
+const toWaypoint = [52.881152, -1.990693]; // latitude, longitude
+const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&details=instruction_details&apiKey=${myAPIKey}`;
+
+// Fetch and display route result in GeoJSON format
+fetch(url)
+    .then(res => res.json())
+    .then(result => {
+        // Ensure there's a valid route result
+        if (result.features && result.features.length > 0) {
+            const routeFeature = result.features[0];
+
+            L.geoJSON(routeFeature, {
+                style: {
+                    color: "rgba(20, 137, 255, 0.7)",
+                    weight: 5
+                }
+            })
+            .bindPopup(layer => {
+                const { distance, distance_units, time } = routeFeature.properties;
+                return `${distance} ${distance_units}, ${time}`;
+            })
+            .addTo(map);
+        } else {
+            console.log("No route data found.");
+        }
+    })
+    .catch(error => console.log("Error fetching route data:", error));
+
+    
 
 // Heatmap layers
 let casesLayer, deathsLayer, vaccinationsLayer;
