@@ -2,17 +2,20 @@ import 'dotenv/config';
 import { MongoClient } from 'mongodb';
 import fetch from 'node-fetch';
 
+// Main function to establish MongoDB connection and process regions
 async function main() {
+    // Set up MongoDB client and connect
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
-    const db = client.db('covid');
+    const db = client.db('COVID-New');
 
+    // Function to fetch coordinates for a given region
     async function getCoordinates(region) {
-        // Check MongoDB cache for existing coordinates
+        // Check for cached coordinates in MongoDB
         const cachedRegion = await db.collection('geolocations').findOne({ region });
         if (cachedRegion) return cachedRegion.coordinates;
 
-        // Modify query for better geocoding accuracy
+        // Modify query for better accuracy when querying OpenCage
         let query = region;
         if (region !== "England" && region !== "London") {
             query = `${region}, England`;
@@ -22,45 +25,29 @@ async function main() {
         const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(query)}&key=${process.env.OPENCAGE_API_KEY}`);
         const json = await response.json();
 
-        // Check for results
+        // Handle case where no results are found
         if (!json.results || json.results.length === 0) {
             console.error(`No results found for region: ${query}`);
             return null;
         }
 
-        // Extract and cache coordinates in MongoDB
+        // Extract and store coordinates in MongoDB
         const { lat, lng } = json.results[0].geometry;
         const coordinates = { lat, lng };
-        await db.collection('geolocations').insertOne({ region, coordinates }); // Cache coordinates
+        await db.collection('geolocations').insertOne({ region, coordinates });
 
         return coordinates;
     }
 
+    // Process specific regions from Excel file
     async function processRegions() {
-        const casesCollection = db.collection('cases');
+        const regions = [
+            "East Midlands", "East of England", "London", "North East", "North West",
+            "South East", "South West", "West Midlands", "Yorkshire and The Humber"
+        ];
         
-        // Retrieve a sample document to extract fields for potential regions
-        const sampleDocument = await casesCollection.findOne();
-        console.log("Sample Document Fields:", Object.keys(sampleDocument));
-
-        // Extract region names from field names
-        const fieldNames = Object.keys(sampleDocument);
-        const regions = new Set();
-
-        fieldNames.forEach(field => {
-            // Clean and parse field names to extract region names
-            const cleanField = field.replace(/\n/g, " ").trim();
-            const region = cleanField.replace(/ Modelled % testing positive for COVID-19| 95% Lower credible interval for percentage| 95% Upper credible interval for percentage/g, "").trim();
-            
-            if (region && !regions.has(region) && !['_id', 'Date'].includes(region)) {
-                regions.add(region);
-            }
-        });
-
-        console.log("Extracted Regions:", Array.from(regions));
-
-        // Geocode each unique region and filter out null values
-        const geocodedRegions = await Promise.all(Array.from(regions).map(async (region) => {
+        // Geocode each unique region
+        const geocodedRegions = await Promise.all(regions.map(async (region) => {
             const coordinates = await getCoordinates(region);
             if (coordinates) { 
                 return { region, coordinates };
@@ -71,8 +58,10 @@ async function main() {
         console.log("Geocoded Regions:", geocodedRegions.filter(Boolean));
     }
 
+    // Run the processRegions function and close the MongoDB client
     await processRegions();
     await client.close();
 }
 
+// Run the main function
 main().catch(console.error);
