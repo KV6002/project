@@ -16,6 +16,7 @@
     "mongodb": "^6.10.0",
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
-    "opencage-api-client": "^1.0.7"
+    "opencage-api-client": "^1.0.7",
+    "xlsx": "^0.18.5"
   }
 }
