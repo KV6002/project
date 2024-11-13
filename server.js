@@ -25,7 +25,7 @@ app.use(cors()); // Enable CORS for all routes
             const query = {};
 
             if (date) query.Date = new RegExp(date, "i"); // Filter by date
-            if (region) query.Region = region; // Filter by exact region name
+            if (region) query["Region"] = region; // Use "Region" field for region filtering
 
             try {
                 const casesData = await casesCollection.find(query).toArray();
@@ -41,8 +41,8 @@ app.use(cors()); // Enable CORS for all routes
             const { date, region } = req.query;
             const query = {};
 
-            if (date) query.Date = new RegExp(date, "i"); // Filter by date
-            if (region) query.Region = region; // Filter by exact region name
+            if (date) query.Month = new RegExp(date, "i"); // Filter by date
+            if (region) query["Area of usual residence"] = region; // Match exact region
 
             try {
                 const deathsData = await deathsCollection.find(query).toArray();
@@ -58,8 +58,8 @@ app.use(cors()); // Enable CORS for all routes
             const { date, region } = req.query;
             const query = {};
 
-            if (date) query.Date = new RegExp(date, "i"); // Filter by date
-            if (region) query.Region = region; // Filter by exact region name
+            if (date) query.Month = new RegExp(date, "i"); // Filter by date
+            if (region) query["Sub-category"] = region; // Use sub-category for region filtering
 
             try {
                 const vaccinesData = await vaccinationsCollection.find(query).toArray();

@@ -50,59 +50,24 @@ async function fetchData(endpoint, region = "") {
 }
 
 
-async function loadData() {
-    const endpoints = {
-        cases: `http://localhost:3000/api/covid-cases?date=${selectedMonth}`,
-        deaths: `http://localhost:3000/api/covid-deaths?date=${selectedMonth}`,
-        vaccines: `http://localhost:3000/api/covid-vaccines?date=${selectedMonth}`
-    };
-
+async function fetchData(endpoint, region = "") {
+    console.log(`Fetching data from endpoint: ${endpoint} for region: ${region}`);
+    if (dataCache.has(endpoint)) {
+        console.log(`Using cached data for ${endpoint}`);
+        return dataCache.get(endpoint);
+    }
     try {
-        const [casesData, deathsData, vaccinesData] = await Promise.all([
-            fetchData(endpoints.cases, selectedRegion),
-            fetchData(endpoints.deaths, selectedRegion),
-            fetchData(endpoints.vaccines, selectedRegion)
-        ]);
-
-        // Check and add only data with valid coordinates
-        casesLayer = L.heatLayer(
-            casesData
-                .filter(item => item.coordinates && item.coordinates.lat && item.coordinates.lng) // Filter valid coordinates
-                .map(item => [
-                    item.coordinates.lat,
-                    item.coordinates.lng,
-                    getCasesMonthlyInformationColour(item[selectedRegion])
-                ]),
-            { radius: 20, blur: 15 }
-        );
-
-        deathsLayer = L.heatLayer(
-            deathsData
-                .filter(item => item.coordinates && item.coordinates.lat && item.coordinates.lng)
-                .map(item => [
-                    item.coordinates.lat,
-                    item.coordinates.lng,
-                    getDeathMonthlyInformationColour(parseInt(item["Number of deaths"]))
-                ]),
-            { radius: 20, blur: 15 }
-        );
-
-        vaccinationsLayer = L.heatLayer(
-            vaccinesData
-                .filter(item => item.coordinates && item.coordinates.lat && item.coordinates.lng)
-                .map(item => [
-                    item.coordinates.lat,
-                    item.coordinates.lng,
-                    getVaccinationMonthlyInformationColour(parseInt(item["Number of people who had not received a vaccination"]))
-                ]),
-            { radius: 20, blur: 15 }
-        );
-
-        if (currentLayer) showLayer(currentLayer);
+        const response = await fetch(`${endpoint}&region=${encodeURIComponent(region)}`);
+        const data = await response.json();
+        console.log(`Data received from ${endpoint}:`, data); // Log fetched data
+        dataCache.set(endpoint, data);
+        return data;
     } catch (error) {
-        console.error("Error loading data:", error);
+        console.error(`Error fetching data from ${endpoint}:`, error);
+        throw error;
     }
 }
+
 
 
 function showLayer(type) {
