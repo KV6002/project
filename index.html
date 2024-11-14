@@ -2,124 +2,49 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UK COVID-19 Data Heatmap</title>
+    <title>COVID-19 Data Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 0;
+        #map { 
+            height: 600px; 
+            width: 100%;
+            margin-bottom: 20px;
         }
-
-        h1 {
-            margin-top: 20px;
-            color: #333;
-        }
-
-        #map {
-            height: 600px;
-            width: 90%;
-            max-width: 1200px;
-            margin: 20px 0;
-            border: 2px solid #ccc;
-            border-radius: 5px;
-        }
-
         .control-panel {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-            align-items: center;
-            background-color: #f9f9f9;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-bottom: 10px;
         }
-
-        .control-panel label {
-            font-weight: bold;
-            margin-right: 5px;
-        }
-
-        .control-panel select, .control-panel input[type="month"] {
+        .control-panel button, #month-slider {
+            margin: 5px;
             padding: 5px;
+            cursor: pointer;
+            background-color: #f8f9fa;
             border: 1px solid #ccc;
             border-radius: 3px;
-            font-size: 1rem;
         }
-
-        .control-panel button {
-            padding: 7px 15px;
-            cursor: pointer;
+        .slider-label {
             font-weight: bold;
             font-size: 1rem;
-            color: #fff;
-            background-color: #007bff;
-            border: none;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-        }
-
-        .control-panel button:hover {
-            background-color: #0056b3;
-        }
-
-        @media (max-width: 768px) {
-            #map {
-                width: 100%;
-            }
-
-            .control-panel {
-                flex-direction: column;
-                align-items: stretch;
-            }
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>COVID-19 UK Region Heatmap</h1>
+    <h1>COVID-19 Data Visualization</h1>
 
     <div class="control-panel">
-        <div>
-            <label for="data-type">Data Type:</label>
-            <button onclick="showLayer('cases')">Cases</button>
-            <button onclick="showLayer('deaths')">Deaths</button>
-            <button onclick="showLayer('vaccines')">Vaccinations</button>
-        </div>
+        <button onclick="showLayer('cases')">Cases</button>
+        <button onclick="showLayer('deaths')">Deaths</button>
+        <button onclick="showLayer('vaccines')">Vaccinations</button>
         
-        <div>
-            <label for="month-picker">Select Month:</label>
-            <input type="month" id="month-picker" onchange="updateMonth(this.value)" aria-label="Select Month" />
-        </div>
-
-        <div>
-            <label for="region-picker">Select Region:</label>
-            <select id="region-picker" onchange="updateRegion(this.value)">
-                <option value="England">England</option>
-                <option value="Wales">Wales</option>
-                <option value="North East">North East</option>
-                <option value="North West">North West</option>
-                <option value="Yorkshire and The Humber">Yorkshire and The Humber</option>
-                <option value="East Midlands">East Midlands</option>
-                <option value="West Midlands">West Midlands</option>
-                <option value="East of England">East of England</option>
-                <option value="London">London</option>
-                <option value="South East">South East</option>
-                <option value="South West">South West</option>
-            </select>
-        </div>
+        <label for="month-slider" class="slider-label">Select Month:</label>
+        <input type="month" id="month-slider" onchange="updateMonth(this.value)" aria-label="Select Month" />
     </div>
 
     <div id="map" aria-label="COVID-19 Data Map"></div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script> 
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <script src="map.js"></script>
 </body>
 </html>
