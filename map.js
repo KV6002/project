@@ -1,5 +1,5 @@
 // Initialize the Leaflet map
-const map = L.map('map').setView([52.3555, -1.1743], 6); // Centre on UK
+const map = L.map('map').setView([52.3555, -1.1743], 6); // Centered on the UK
 
 var myAPIKey = "6e8dbb26e95e4992baa404893d4d2892"; // geoapify key
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -73,64 +73,67 @@ map.on('click', (event) => {
 });
 // Heatmap layers
 let casesLayer, deathsLayer, vaccinationsLayer;
+let currentLayer = null;
+let selectedMonth = "Jan-23"; // Default month
 
-// Function to load and set up layers
-async function loadData() {
-    // Load cases data
-    const casesResponse = await fetch('/api/covid-cases');
-    const casesData = await casesResponse.json();
-    const casesPoints = casesData.map(entry => [entry.latitude, entry.longitude, entry.intensity]);
-    casesLayer = L.heatLayer(casesPoints, {
-        radius: 20,
-        blur: 15,
-        gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
-    });
+// Cache to store fetched data
+const dataCache = new Map();
 
-    // Load deaths data
-    const deathsResponse = await fetch('/api/covid-deaths');
-    const deathsData = await deathsResponse.json();
-    const deathsPoints = deathsData.map(entry => [entry.latitude, entry.longitude, entry.intensity]);
-    deathsLayer = L.heatLayer(deathsPoints, {
-        radius: 20,
-        blur: 15,
-        gradient: { 0.4: 'purple', 0.65: 'orange', 1: 'black' }
-    });
-
-    // Load vaccinations data
-    const vaccinationsResponse = await fetch('/api/covid-vaccines');
-    const vaccinationsData = await vaccinationsResponse.json();
-    const vaccinationsPoints = vaccinationsData.map(entry => [entry.latitude, entry.longitude, entry.intensity]);
-    vaccinationsLayer = L.heatLayer(vaccinationsPoints, {
-        radius: 20,
-        blur: 15,
-        gradient: { 0.4: 'yellow', 0.65: 'green', 1: 'darkgreen' }
-    });
+async function fetchData(endpoint) {
+    if (dataCache.has(endpoint)) {
+        return dataCache.get(endpoint);
+    }
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        dataCache.set(endpoint, data);
+        return data;
+    } catch (error) {
+        console.error(`Error fetching data from ${endpoint}:`, error);
+        throw error;
+    }
 }
 
-// Call loadData function to fetch and set up the layers
-loadData();
+// Fetch data and load into heatmap layers
+async function loadData() {
+    const endpoints = {
+        cases: `/api/covid-cases?date=${selectedMonth}`,
+        deaths: `/api/covid-deaths?date=${selectedMonth}`,
+        vaccines: `/api/covid-vaccines?date=${selectedMonth}`
+    };
 
-// Filter Control: Custom control switch between layers. 
-const filterControl = L.control({position: 'topright'});
-filterControl.onAdd = function() {
-    const div = L.DomUtil.create('div', 'filter-control');
-    div.innerHTML = `
-        <button onclick="showLayer('cases')">Cases</button>
-        <button onclick="showLayer('deaths')">Deaths</button>
-        <button onclick="showLayer('vaccines')">Vaccinations</button>
-    `;
-    return div;
-};
-filterControl.addTo(map);
+    try {
+        const casesResponse = await fetch(endpoints.cases);
+        const casesData = await casesResponse.json();
+        const casesPoints = casesData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
+        casesLayer = L.heatLayer(casesPoints, { radius: 20, blur: 15 });
 
-// Function to show selected layer and hide others
-function showLayer(type) {
-    map.eachLayer(layer => {
-        if (layer === casesLayer || layer === deathsLayer || layer === vaccinationsLayer) {
-            map.removeLayer(layer);
+        const deathsResponse = await fetch(endpoints.deaths);
+        const deathsData = await deathsResponse.json();
+        const deathsPoints = deathsData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
+        deathsLayer = L.heatLayer(deathsPoints, { radius: 20, blur: 15 });
+
+        const vaccinationsResponse = await fetch(endpoints.vaccines);
+        const vaccinationsData = await vaccinationsResponse.json();
+        const vaccinationsPoints = vaccinationsData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
+        vaccinationsLayer = L.heatLayer(vaccinationsPoints, { radius: 20, blur: 15 });
+
+        if (currentLayer) {
+            showLayer(currentLayer);
         }
-    });
+    } catch (error) {
+        console.error("Error loading data:", error);
+    }
+}
 
+// Function to show the selected layer and hide others
+function showLayer(type) {
+    // Remove any existing layers
+    if (casesLayer) map.removeLayer(casesLayer);
+    if (deathsLayer) map.removeLayer(deathsLayer);
+    if (vaccinationsLayer) map.removeLayer(vaccinationsLayer);
+
+    // Add the selected layer to the map
     if (type === 'cases' && casesLayer) {
         casesLayer.addTo(map);
     } else if (type === 'deaths' && deathsLayer) {
@@ -138,4 +141,18 @@ function showLayer(type) {
     } else if (type === 'vaccines' && vaccinationsLayer) {
         vaccinationsLayer.addTo(map);
     }
+
+    // Update the current layer
+    currentLayer = type;
 }
+
+// Function to update the month based on slider input
+function updateMonth(monthValue) {
+    const [year, month] = monthValue.split("-");
+    const monthName = new Date(`${year}-${month}-01`).toLocaleString('default', { month: 'short' });
+    selectedMonth = `${monthName}-${year.slice(-2)}`; // Format as "Jan-23"
+    loadData(); // Reload data for the selected month
+}
+
+// Initial load
+loadData();

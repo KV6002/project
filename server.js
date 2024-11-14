@@ -1,20 +1,20 @@
 const express = require('express');
-const client = require('./db'); // Make sure db.js exports MongoDB client
+const client = require('./db');
+const NodeCache = require('node-cache');
+const cache = new NodeCache();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 (async () => {
     try {
-        // Connect to MongoDB and select the covid database
         await client.connect();
         console.log("Connected to MongoDB");
 
-        const covidDb = client.db("covid");
-        const casesCollection = covidDb.collection("cases");
-        const deathsCollection = covidDb.collection("deaths");
-        const vaccinationsCollection = covidDb.collection("vaccines");
+        const covidDb = client.db("COVID-New");
+        const casesCollection = covidDb.collection("Cases");
+        const deathsCollection = covidDb.collection("Deaths");
+        const vaccinationsCollection = covidDb.collection("Vaccines");
 
-        // Check if each collection has documents, log a message if it's empty
         if ((await casesCollection.countDocuments({})) === 0) {
             console.log("No documents found in cases collection!");
         }
@@ -25,35 +25,44 @@ const PORT = process.env.PORT || 3000;
             console.log("No documents found in vaccinations collection!");
         }
 
-        // Define API route for COVID-19 cases data
-        app.get('/api/covid-cases', async (req, res) => {
+        const fetchData = async (collection, key) => {
+            if (cache.has(key)) {
+                return cache.get(key);
+            }
+            const data = await collection.find({}).toArray();
+            cache.set(key, data);
+            return data;
+        };
+
+        app.get('/api/COVID-New-Cases', async (req, res) => {
             try {
-                const casesData = await casesCollection.find({}).toArray();
-                console.log("Cases Data:", casesData); // Log for debugging
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
+                const casesData = await casesCollection.find(query).toArray();
                 res.json(casesData);
             } catch (error) {
                 console.error("Error fetching COVID-19 cases:", error);
                 res.status(500).send("Internal Server Error");
             }
         });
-
-        // Define API route for COVID-19 deaths data
-        app.get('/api/covid-deaths', async (req, res) => {
+        
+        app.get('/api/COVID-NEW-Deaths', async (req, res) => {
             try {
-                const deathsData = await deathsCollection.find({}).toArray();
-                console.log("Deaths Data:", deathsData); // Log for debugging
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
+                const deathsData = await deathsCollection.find(query).toArray();
                 res.json(deathsData);
             } catch (error) {
                 console.error("Error fetching COVID-19 deaths:", error);
                 res.status(500).send("Internal Server Error");
             }
         });
-
-        // Define API route for COVID-19 vaccinations data
-        app.get('/api/covid-vaccines', async (req, res) => {
-            try {   
-                const vaccinationsData = await vaccinationsCollection.find({}).toArray();
-                console.log("Vaccinations Data:", vaccinationsData); // Log for debugging
+        
+        app.get('/api/COVID-NEW-Vaccines', async (req, res) => {
+            try {
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
+                const vaccinationsData = await vaccinationsCollection.find(query).toArray();
                 res.json(vaccinationsData);
             } catch (error) {
                 console.error("Error fetching COVID-19 vaccinations:", error);
@@ -61,7 +70,6 @@ const PORT = process.env.PORT || 3000;
             }
         });
 
-        // Start the server
         app.listen(PORT, () => {
             console.log(`Server running on http://localhost:${PORT}`);
         });
