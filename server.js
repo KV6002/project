@@ -1,33 +1,43 @@
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const { MongoClient } = require('mongodb');
-
+const client = require('./db');
+const NodeCache = require('node-cache');
+const cache = new NodeCache();
 const app = express();
 const PORT = process.env.PORT || 3000;
-const client = new MongoClient(process.env.MONGODB_URI);
-
-app.use(cors()); // Enable CORS for all routes
 
 (async () => {
     try {
         await client.connect();
         console.log("Connected to MongoDB");
 
-        const db = client.db("covid");
-        const casesCollection = db.collection("cases");
-        const deathsCollection = db.collection("deaths");
-        const vaccinationsCollection = db.collection("vaccines");
+        const covidDb = client.db("COVID-New");
+        const casesCollection = covidDb.collection("Cases");
+        const deathsCollection = covidDb.collection("Deaths");
+        const vaccinationsCollection = covidDb.collection("Vaccines");
 
-        // Endpoint for COVID cases data
-        app.get('/api/covid-cases', async (req, res) => {
-            const { date, region } = req.query;
-            const query = {};
+        if ((await casesCollection.countDocuments({})) === 0) {
+            console.log("No documents found in cases collection!");
+        }
+        if ((await deathsCollection.countDocuments({})) === 0) {
+            console.log("No documents found in deaths collection!");
+        }
+        if ((await vaccinationsCollection.countDocuments({})) === 0) {
+            console.log("No documents found in vaccinations collection!");
+        }
 
-            if (date) query.Date = new RegExp(date, "i"); // Filter by date
-            if (region) query["Region"] = region; // Use "Region" field for region filtering
+        const fetchData = async (collection, key) => {
+            if (cache.has(key)) {
+                return cache.get(key);
+            }
+            const data = await collection.find({}).toArray();
+            cache.set(key, data);
+            return data;
+        };
 
+        app.get('/api/COVID-New-Cases', async (req, res) => {
             try {
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
                 const casesData = await casesCollection.find(query).toArray();
                 res.json(casesData);
             } catch (error) {
@@ -35,16 +45,11 @@ app.use(cors()); // Enable CORS for all routes
                 res.status(500).send("Internal Server Error");
             }
         });
-
-        // Endpoint for COVID deaths data
-        app.get('/api/covid-deaths', async (req, res) => {
-            const { date, region } = req.query;
-            const query = {};
-
-            if (date) query.Month = new RegExp(date, "i"); // Filter by date
-            if (region) query["Area of usual residence"] = region; // Match exact region
-
+        
+        app.get('/api/COVID-NEW-Deaths', async (req, res) => {
             try {
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
                 const deathsData = await deathsCollection.find(query).toArray();
                 res.json(deathsData);
             } catch (error) {
@@ -52,18 +57,13 @@ app.use(cors()); // Enable CORS for all routes
                 res.status(500).send("Internal Server Error");
             }
         });
-
-        // Endpoint for COVID vaccinations data
-        app.get('/api/covid-vaccines', async (req, res) => {
-            const { date, region } = req.query;
-            const query = {};
-
-            if (date) query.Month = new RegExp(date, "i"); // Filter by date
-            if (region) query["Sub-category"] = region; // Use sub-category for region filtering
-
+        
+        app.get('/api/COVID-NEW-Vaccines', async (req, res) => {
             try {
-                const vaccinesData = await vaccinationsCollection.find(query).toArray();
-                res.json(vaccinesData);
+                const { date } = req.query;
+                const query = date ? { Date: date } : {};
+                const vaccinationsData = await vaccinationsCollection.find(query).toArray();
+                res.json(vaccinationsData);
             } catch (error) {
                 console.error("Error fetching COVID-19 vaccinations:", error);
                 res.status(500).send("Internal Server Error");
