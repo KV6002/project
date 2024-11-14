@@ -33,20 +33,20 @@ async function fetchData(endpoint) {
 // Fetch data and load into heatmap layers
 async function loadData() {
     const endpoints = {
-        cases: `/api/COVID-NEW-Cases?date=${selectedMonth}`,
-        deaths: `/api/COVID-NEW-Deaths?date=${selectedMonth}`,
-        vaccines: `/api/COVID-NEW-Vaccines?date=${selectedMonth}`
+        cases: `/api/COVID-NEW-Cases?Non-overlapping 14-day period${selectedMonth}`,
+        deaths: `/api/COVID-NEW-Deaths?Non-overlapping 14-day period${selectedMonth}`,
+        vaccines: `/api/COVID-NEW-Vaccines?Non-overlapping 14-day period${selectedMonth}`
     };
 
     try {
         const casesResponse = await fetch(endpoints.cases);
         const casesData = await casesResponse.json();
-        const casesPoints = casesData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
+        const casesPoints = casesData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 1]);
         casesLayer = L.heatLayer(casesPoints, { radius: 20, blur: 15 });
 
         const deathsResponse = await fetch(endpoints.deaths);
         const deathsData = await deathsResponse.json();
-        const deathsPoints = deathsData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 0.5]);
+        const deathsPoints = deathsData.filter(item => item.coordinates).map(item => [item.coordinates.lat, item.coordinates.lng, 1]);
         deathsLayer = L.heatLayer(deathsPoints, { radius: 20, blur: 15 });
 
         const vaccinationsResponse = await fetch(endpoints.vaccines);
