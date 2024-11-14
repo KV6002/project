@@ -59,7 +59,7 @@ async function loadCoordinatesForData(dataArray, intensityFunction) {
             if (coordinates) {
                 item.coordinates = coordinates; // Attach coordinates from geolocation data
             } else {
-                console.error(`No coordinates found for region: ${item.Region}`);
+                console.warn(`Skipping region without coordinates: ${item.Region}`);
                 continue; // Skip this item if no coordinates are found
             }
         }
@@ -98,14 +98,18 @@ async function loadData() {
         const vaccinationsPoints = await loadCoordinatesForData(vaccinationsData, item => getVaccinationMonthlyInformationColour(item["Number_received_three_vaccines"]));
         vaccinationsLayer = L.heatLayer(vaccinationsPoints, { radius: 20, blur: 15 });
 
+        // Load the selected layer if set, else default to cases
         if (currentLayer) {
             showLayer(currentLayer);
+        } else {
+            showLayer('cases'); // Default view
         }
     } catch (error) {
         console.error("Error loading data:", error);
     }
 }
 
+// Function to clear the current layer and display a new one
 function showLayer(type) {
     if (casesLayer) map.removeLayer(casesLayer);
     if (deathsLayer) map.removeLayer(deathsLayer);
@@ -120,18 +124,23 @@ function showLayer(type) {
     }
 
     currentLayer = type;
+    console.log(`Displaying ${type} layer`);
 }
 
+// Function to update the month and year, clear the previous layer, and reload the data
 function updateMonth(monthValue) {
     const [year, month] = monthValue.split("-");
     const dateObj = new Date(`${year}-${month}-01`);
     const formattedDate = `${dateObj.toLocaleString('default', { month: 'long' })} ${year}`;
     selectedDate = formattedDate;
     console.log(`Selected Date: ${selectedDate}`);
+
+    // Clear and reload data for the selected month and year
     loadData();
 }
 
 window.showLayer = showLayer;
 window.updateMonth = updateMonth;
 
+// Initial load
 loadData();
