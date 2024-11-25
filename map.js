@@ -4,43 +4,43 @@ const map = L.map('map').setView([52.3555, -1.1743], 6); // Centered on the UK
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
+    minZoom: 4,
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
 let casesLayer, deathsLayer, vaccinationsLayer;
+let markersLayer = L.layerGroup().addTo(map); // Separate layer for markers
 let currentLayer = null;
-let selectedDate = "January 2023";
+let selectedDate = "October 2024";
 
-const BASE_URL = "http://localhost:3000"; 
+const BASE_URL = "http://localhost:3000";
 
 const dataCache = new Map();
-let geolocationMap = new Map(); // Map to hold region-based geolocation data
 
-async function fetchGeolocations() {
-    try {
-        const response = await fetch(`${BASE_URL}/api/COVID-NEW-geolocations`);
-        const geolocationsData = await response.json();
+// Hardcoded geolocation data
+const geolocationData = [
+    { region: "north east", coordinates: { lat: 54.978, lng: -1.617 } },
+    { region: "north west", coordinates: { lat: 53.767623, lng: -2.703089 } },
+    { region: "london", coordinates: { lat: 51.5074, lng: -0.1278 } },
+    { region: "south west", coordinates: { lat: 51.454, lng: -2.589 } },
+    { region: "south east", coordinates: { lat: 51.235685, lng: -0.906304 } },
+    { region: "east midlands", coordinates: { lat: 52.971, lng: -1.168 } },
+    { region: "yorkshire and the humber", coordinates: { lat: 53.799, lng: -1.549 } },
+    { region: "wales", coordinates: { lat: 52.2928116, lng: -3.73893 } },
+    { region: "east of england", coordinates: { lat: 52.205, lng: 0.121 } },
+    // Add all other regions here
+];
 
-        // Create a Map with region as key and coordinates as value
-        geolocationsData.forEach(item => {
-            geolocationMap.set(item.region, item.coordinates);
-        });
-        console.log("Geolocation data loaded:", geolocationMap);
-    } catch (error) {
-        console.error("Error fetching geolocations data:", error);
-    }
-}
+const geolocationMap = new Map(geolocationData.map(item => [item.region.trim().toLowerCase(), item.coordinates]));
 
+// Fetch data from API
 async function fetchData(endpoint) {
-    console.log(`Fetching data from endpoint: ${endpoint}`);
     if (dataCache.has(endpoint)) {
-        console.log("Data loaded from cache:", dataCache.get(endpoint));
         return dataCache.get(endpoint);
     }
     try {
         const response = await fetch(endpoint);
         const data = await response.json();
-        console.log("Data fetched:", data);
         dataCache.set(endpoint, data);
         return data;
     } catch (error) {
@@ -49,67 +49,121 @@ async function fetchData(endpoint) {
     }
 }
 
+// Load data and map coordinates
 async function loadCoordinatesForData(dataArray, intensityFunction) {
     const points = [];
+    const details = [];
 
     for (const item of dataArray) {
-        // Check if the item has coordinates; if not, look them up in the geolocationMap
-        if (!item.coordinates) {
-            const coordinates = geolocationMap.get(item.Region);
-            if (coordinates) {
-                item.coordinates = coordinates; // Attach coordinates from geolocation data
-            } else {
-                console.warn(`Skipping region without coordinates: ${item.Region}`);
-                continue; // Skip this item if no coordinates are found
-            }
+        const region = item.Region.trim().toLowerCase();
+        const coordinates = geolocationMap.get(region);
+
+        if (!coordinates) {
+            console.warn(`No coordinates for region: ${item.Region}`); // Log unmatched regions
+            continue;
         }
 
+        // Apply intensity function
         const intensity = intensityFunction(item);
-        points.push([item.coordinates.lat, item.coordinates.lng, intensity]);
+        points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
+
+        // Prepare details for popups
+        details.push({
+            region: item.Region,
+            lat: coordinates.lat,
+            lng: coordinates.lng,
+            value: item
+        });
+
+        // Debugging: Log coordinates and details
+        console.log(`Marker for ${item.Region}: [${coordinates.lat}, ${coordinates.lng}]`);
     }
 
-    return points;
+    return { points, details };
 }
 
+// Load all data
 async function loadData() {
-    await fetchGeolocations(); // Load geolocations before fetching COVID data
-
     const endpoints = {
         cases: `${BASE_URL}/api/COVID-New-Cases?date=${encodeURIComponent(selectedDate)}`,
         deaths: `${BASE_URL}/api/COVID-NEW-Deaths?date=${encodeURIComponent(selectedDate)}`,
         vaccines: `${BASE_URL}/api/COVID-NEW-Vaccines?date=${encodeURIComponent(selectedDate)}`
     };
 
-    console.log("Endpoints with date:", endpoints);
-
     try {
+        // Fetch and process data for all layers
         const casesData = await fetchData(endpoints.cases);
-        console.log("Cases data loaded:", casesData);
-        const casesPoints = await loadCoordinatesForData(casesData, item => getCasesMonthlyInformationColour(item["Number of tests positive for COVID-19"]));
-        casesLayer = L.heatLayer(casesPoints, { radius: 20, blur: 15 });
+        const { points: casesPoints, details: casesDetails } = await loadCoordinatesForData(
+            casesData,
+            item => getCasesMonthlyInformationColour(item["Number of tests positive for COVID-19"])
+        );
+        casesLayer = createHeatLayer(casesPoints, casesDetails, "cases");
 
         const deathsData = await fetchData(endpoints.deaths);
-        console.log("Deaths data loaded:", deathsData);
-        const deathsPoints = await loadCoordinatesForData(deathsData, item => getDeathMonthlyInformationColour(item["Number of deaths"]));
-        deathsLayer = L.heatLayer(deathsPoints, { radius: 20, blur: 15 });
+        const { points: deathsPoints, details: deathsDetails } = await loadCoordinatesForData(
+            deathsData,
+            item => getDeathMonthlyInformationColour(item["Number of deaths"])
+        );
+        deathsLayer = createHeatLayer(deathsPoints, deathsDetails, "deaths");
 
         const vaccinationsData = await fetchData(endpoints.vaccines);
-        console.log("Vaccinations data loaded:", vaccinationsData);
-        const vaccinationsPoints = await loadCoordinatesForData(vaccinationsData, item => getVaccinationMonthlyInformationColour(item["Number_received_three_vaccines"]));
-        vaccinationsLayer = L.heatLayer(vaccinationsPoints, { radius: 20, blur: 15 });
+        const { points: vaccinationsPoints, details: vaccinationsDetails } = await loadCoordinatesForData(
+            vaccinationsData,
+            item => getVaccinationMonthlyInformationColour(item["Number_received_three_vaccines"])
+        );
+        vaccinationsLayer = createHeatLayer(vaccinationsPoints, vaccinationsDetails, "vaccinations");
 
-        // Load the selected layer if set, else default to cases
         if (currentLayer) {
-            showLayer(currentLayer);
+            showLayer(currentLayer); // Show the selected layer (if any)
         } else {
-            showLayer('cases'); // Default view
+            showLayer('cases'); // Default
         }
     } catch (error) {
         console.error("Error loading data:", error);
     }
+
+    // Add legend to the map
+    addLegend();
 }
 
-// Function to clear the current layer and display a new one
+// Create heatmap layer with clickable markers
+function createHeatLayer(points, details, layerType) {
+    // Create the heatmap layer
+    const layer = L.heatLayer(points, {
+        radius: 30,
+        blur: 20,
+        maxZoom: 8,
+        gradient: {
+            0.0: 'blue',
+            0.4: 'green',
+            0.7: 'orange',
+            1.0: 'red'
+        }
+    });
+
+    // Clear and re-add markers
+    markersLayer.clearLayers();
+
+    // Add markers for details
+    details.forEach(detail => {
+        let popupContent = `<strong>Region:</strong> ${detail.region}<br>`;
+        if (layerType === "cases") {
+            popupContent += `<strong>Cases:</strong> ${detail.value["Number of tests positive for COVID-19"]}`;
+        } else if (layerType === "deaths") {
+            popupContent += `<strong>Deaths:</strong> ${detail.value["Number of deaths"]}`;
+        } else if (layerType === "vaccinations") {
+            popupContent += `<strong>Vaccinations:</strong> ${detail.value["Number_received_three_vaccines"]}`;
+        }
+
+        const marker = L.marker([detail.lat, detail.lng], { zIndexOffset: 1000 }) // Ensure marker is above heatmap
+            .bindPopup(popupContent);
+        markersLayer.addLayer(marker); // Add marker to markersLayer
+    });
+
+    return layer;
+}
+
+// Show specific layer
 function showLayer(type) {
     if (casesLayer) map.removeLayer(casesLayer);
     if (deathsLayer) map.removeLayer(deathsLayer);
@@ -124,19 +178,34 @@ function showLayer(type) {
     }
 
     currentLayer = type;
-    console.log(`Displaying ${type} layer`);
 }
 
-// Function to update the month and year, clear the previous layer, and reload the data
+// Update the selected month
 function updateMonth(monthValue) {
     const [year, month] = monthValue.split("-");
-    const dateObj = new Date(`${year}-${month}-01`);
-    const formattedDate = `${dateObj.toLocaleString('default', { month: 'long' })} ${year}`;
+    const formattedDate = `${new Date(`${year}-${month}-01`).toLocaleString('default', { month: 'long' })} ${year}`;
     selectedDate = formattedDate;
-    console.log(`Selected Date: ${selectedDate}`);
 
-    // Clear and reload data for the selected month and year
-    loadData();
+    loadData(); // Reload data for the selected month
+}
+
+// Add a legend to explain intensity levels
+function addLegend() {
+    const legend = L.control({ position: "bottomright" });
+
+    legend.onAdd = function () {
+        const div = L.DomUtil.create("div", "info legend");
+        div.innerHTML = `
+            <h4>Intensity Levels</h4>
+            <i style="background: blue"></i> Low<br>
+            <i style="background: green"></i> Medium<br>
+            <i style="background: orange"></i> High<br>
+            <i style="background: red"></i> Very High<br>
+        `;
+        return div;
+    };
+
+    legend.addTo(map);
 }
 
 window.showLayer = showLayer;
