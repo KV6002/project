@@ -1,7 +1,6 @@
 // Initialize the Leaflet map
 const map = L.map('map').setView([52.3555, -1.1743], 6); // Centered on the UK
 
-var myAPIKey = "6e8dbb26e95e4992baa404893d4d2892"; // geoapify key
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
     attribution: '© OpenStreetMap contributors'
@@ -14,7 +13,7 @@ let toWaypoint = null;
 // Function to fetch and display route
 function fetchAndDisplayRoute() {
     if (fromWaypoint && toWaypoint) {
-        const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&details=instruction_details&apiKey=${myAPIKey}`;
+        const url = `http://localhost:8080/ors/v2/directions/driving-car?&start=${fromWaypoint.toReversed().join(',')}&end=${toWaypoint.toReversed().join(',')}`;
         
         fetch(url)
             .then(res => res.json())
@@ -69,6 +68,7 @@ map.on('click', (event) => {
         });
         L.marker(fromWaypoint).addTo(map).bindPopup("Start Point").openPopup();
         console.log("Start point reset:", fromWaypoint);
+        
     }
 });
 // Heatmap layers
