@@ -4,7 +4,7 @@
   "description": "link to website: https://KV6002.github.io/project/dashboard/",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha test/*.test.js"
   },
   "keywords": [],
   "author": "",
@@ -14,10 +14,12 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
+    "mocha": "^10.8.2",
     "mongodb": "^6.10.0",
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
     "opencage-api-client": "^1.0.7",
+    "unit.js": "^2.1.1",
     "xlsx": "^0.18.5"
   }
 }
