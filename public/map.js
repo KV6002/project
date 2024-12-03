@@ -100,7 +100,17 @@ function createHeatLayer(points, details, layerType) {
   const markersLayer = L.layerGroup();
 
   details.forEach((detail) => {
-    const popupContent = `<strong>Region:</strong> ${detail.region}<br>`;
+    let popupContent = `<strong>Region:</strong> ${detail.region}<br>`;
+
+    // Add specific data based on layer type
+    if (layerType === "cases") {
+      popupContent += `<strong>Cases:</strong> ${detail.value["Number of tests positive for COVID-19"] || "N/A"}`;
+    } else if (layerType === "deaths") {
+      popupContent += `<strong>Deaths:</strong> ${detail.value["Number of deaths"] || "N/A"}`;
+    } else if (layerType === "vaccinations") {
+      popupContent += `<strong>Vaccinations:</strong> ${detail.value["Number_received_three_vaccines"] || "N/A"}`;
+    }
+
     const marker = L.marker([detail.lat, detail.lng]).bindPopup(popupContent);
     markersLayer.addLayer(marker);
   });
