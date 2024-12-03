@@ -13,8 +13,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap contributors",
 }).addTo(map);
 
-let casesLayer, deathsLayer, vaccinationsLayer, casesMarkersLayer, deathsMarkersLayer, vaccinationsMarkersLayer;
-let currentLayer = null;
+let casesLayer, deathsLayer, vaccinationsLayer, currentLayer = null;
 
 const now = new Date();
 let selectedDate = `${now.toLocaleString("default", { month: "long" })} ${now.getFullYear()}`;
@@ -78,41 +77,6 @@ async function loadCoordinatesForData(dataArray, intensityFunction) {
   return { points, details };
 }
 
-async function loadData() {
-  const endpoints = {
-    cases: `${BASE_URL}/api/covid-cases?date=${encodeURIComponent(selectedDate)}`,
-    deaths: `${BASE_URL}/api/covid-deaths?date=${encodeURIComponent(selectedDate)}`,
-    vaccines: `${BASE_URL}/api/covid-vaccines?date=${encodeURIComponent(selectedDate)}`,
-  };
-
-  try {
-    const casesData = await fetchData(endpoints.cases);
-    const deathsData = await fetchData(endpoints.deaths);
-    const vaccinationsData = await fetchData(endpoints.vaccines);
-
-    const { points: casesPoints, details: casesDetails } = await loadCoordinatesForData(
-      casesData,
-      (item) => getCasesMonthlyInformationColour(item["Number of tests positive for COVID-19"])
-    );
-    const { points: deathsPoints, details: deathsDetails } = await loadCoordinatesForData(
-      deathsData,
-      (item) => getDeathMonthlyInformationColour(item["Number of deaths"])
-    );
-    const { points: vaccinationsPoints, details: vaccinationsDetails } = await loadCoordinatesForData(
-      vaccinationsData,
-      (item) => getVaccinationMonthlyInformationColour(item["Number_received_three_vaccines"])
-    );
-
-    casesLayer = createHeatLayer(casesPoints, casesDetails, "cases").heatLayer;
-    deathsLayer = createHeatLayer(deathsPoints, deathsDetails, "deaths").heatLayer;
-    vaccinationsLayer = createHeatLayer(vaccinationsPoints, vaccinationsDetails, "vaccinations").heatLayer;
-
-    showLayer("cases");
-  } catch (error) {
-    console.error("Error loading data:", error);
-  }
-}
-
 function createHeatLayer(points, details, layerType) {
   if (details.length === 0) {
     console.warn(`No details available for layer: ${layerType}`);
@@ -142,14 +106,72 @@ function createHeatLayer(points, details, layerType) {
   return { heatLayer, markersLayer };
 }
 
+async function loadData() {
+  const endpoints = {
+    cases: `${BASE_URL}/api/covid-cases?date=${encodeURIComponent(selectedDate)}`,
+    deaths: `${BASE_URL}/api/covid-deaths?date=${encodeURIComponent(selectedDate)}`,
+    vaccines: `${BASE_URL}/api/covid-vaccines?date=${encodeURIComponent(selectedDate)}`,
+  };
+
+  try {
+    const casesData = await fetchData(endpoints.cases);
+    if (casesData.length > 0) {
+      const { points: casesPoints, details: casesDetails } = await loadCoordinatesForData(
+        casesData,
+        (item) => getCasesMonthlyInformationColour(item["Number of tests positive for COVID-19"])
+      );
+      const { heatLayer } = createHeatLayer(casesPoints, casesDetails, "cases");
+      casesLayer = heatLayer;
+    } else {
+      console.warn("No cases data available.");
+      casesLayer = null;
+    }
+
+    const deathsData = await fetchData(endpoints.deaths);
+    if (deathsData.length > 0) {
+      const { points: deathsPoints, details: deathsDetails } = await loadCoordinatesForData(
+        deathsData,
+        (item) => getDeathMonthlyInformationColour(item["Number of deaths"])
+      );
+      const { heatLayer } = createHeatLayer(deathsPoints, deathsDetails, "deaths");
+      deathsLayer = heatLayer;
+    } else {
+      console.warn("No deaths data available.");
+      deathsLayer = null;
+    }
+
+    const vaccinationsData = await fetchData(endpoints.vaccines);
+    if (vaccinationsData.length > 0) {
+      const { points: vaccinationsPoints, details: vaccinationsDetails } = await loadCoordinatesForData(
+        vaccinationsData,
+        (item) => getVaccinationMonthlyInformationColour(item["Number_received_three_vaccines"])
+      );
+      const { heatLayer } = createHeatLayer(vaccinationsPoints, vaccinationsDetails, "vaccinations");
+      vaccinationsLayer = heatLayer;
+    } else {
+      console.warn("No vaccinations data available.");
+      vaccinationsLayer = null;
+    }
+
+    if (currentLayer) {
+      showLayer(currentLayer);
+    } else {
+      showLayer("cases");
+    }
+  } catch (error) {
+    console.error("Error loading data:", error);
+  }
+}
+
 function showLayer(type) {
   if (casesLayer) map.removeLayer(casesLayer);
   if (deathsLayer) map.removeLayer(deathsLayer);
   if (vaccinationsLayer) map.removeLayer(vaccinationsLayer);
 
-  if (type === "cases") casesLayer.addTo(map);
-  if (type === "deaths") deathsLayer.addTo(map);
-  if (type === "vaccines") vaccinationsLayer.addTo(map);
+  if (type === "cases" && casesLayer) casesLayer.addTo(map);
+  else if (type === "deaths" && deathsLayer) deathsLayer.addTo(map);
+  else if (type === "vaccines" && vaccinationsLayer) vaccinationsLayer.addTo(map);
+  else console.warn(`Layer for type "${type}" is not available.`);
 
   currentLayer = type;
 }
