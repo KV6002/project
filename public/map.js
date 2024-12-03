@@ -13,7 +13,9 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap contributors",
 }).addTo(map);
 
-let casesLayer, deathsLayer, vaccinationsLayer, currentLayer = null;
+let casesLayer, deathsLayer, vaccinationsLayer;
+let casesMarkersLayer, deathsMarkersLayer, vaccinationsMarkersLayer;
+let currentLayer = null;
 
 const now = new Date();
 let selectedDate = `${now.toLocaleString("default", { month: "long" })} ${now.getFullYear()}`;
@@ -120,11 +122,13 @@ async function loadData() {
         casesData,
         (item) => getCasesMonthlyInformationColour(item["Number of tests positive for COVID-19"])
       );
-      const { heatLayer } = createHeatLayer(casesPoints, casesDetails, "cases");
+      const { heatLayer, markersLayer } = createHeatLayer(casesPoints, casesDetails, "cases");
       casesLayer = heatLayer;
+      casesMarkersLayer = markersLayer;
     } else {
       console.warn("No cases data available.");
       casesLayer = null;
+      casesMarkersLayer = null;
     }
 
     const deathsData = await fetchData(endpoints.deaths);
@@ -133,11 +137,13 @@ async function loadData() {
         deathsData,
         (item) => getDeathMonthlyInformationColour(item["Number of deaths"])
       );
-      const { heatLayer } = createHeatLayer(deathsPoints, deathsDetails, "deaths");
+      const { heatLayer, markersLayer } = createHeatLayer(deathsPoints, deathsDetails, "deaths");
       deathsLayer = heatLayer;
+      deathsMarkersLayer = markersLayer;
     } else {
       console.warn("No deaths data available.");
       deathsLayer = null;
+      deathsMarkersLayer = null;
     }
 
     const vaccinationsData = await fetchData(endpoints.vaccines);
@@ -146,11 +152,13 @@ async function loadData() {
         vaccinationsData,
         (item) => getVaccinationMonthlyInformationColour(item["Number_received_three_vaccines"])
       );
-      const { heatLayer } = createHeatLayer(vaccinationsPoints, vaccinationsDetails, "vaccinations");
+      const { heatLayer, markersLayer } = createHeatLayer(vaccinationsPoints, vaccinationsDetails, "vaccinations");
       vaccinationsLayer = heatLayer;
+      vaccinationsMarkersLayer = markersLayer;
     } else {
       console.warn("No vaccinations data available.");
       vaccinationsLayer = null;
+      vaccinationsMarkersLayer = null;
     }
 
     if (currentLayer) {
@@ -164,14 +172,27 @@ async function loadData() {
 }
 
 function showLayer(type) {
+  // Remove existing layers
   if (casesLayer) map.removeLayer(casesLayer);
+  if (casesMarkersLayer) map.removeLayer(casesMarkersLayer);
   if (deathsLayer) map.removeLayer(deathsLayer);
+  if (deathsMarkersLayer) map.removeLayer(deathsMarkersLayer);
   if (vaccinationsLayer) map.removeLayer(vaccinationsLayer);
+  if (vaccinationsMarkersLayer) map.removeLayer(vaccinationsMarkersLayer);
 
-  if (type === "cases" && casesLayer) casesLayer.addTo(map);
-  else if (type === "deaths" && deathsLayer) deathsLayer.addTo(map);
-  else if (type === "vaccines" && vaccinationsLayer) vaccinationsLayer.addTo(map);
-  else console.warn(`Layer for type "${type}" is not available.`);
+  // Add selected layer
+  if (type === "cases" && casesLayer && casesMarkersLayer) {
+    casesLayer.addTo(map);
+    casesMarkersLayer.addTo(map);
+  } else if (type === "deaths" && deathsLayer && deathsMarkersLayer) {
+    deathsLayer.addTo(map);
+    deathsMarkersLayer.addTo(map);
+  } else if (type === "vaccines" && vaccinationsLayer && vaccinationsMarkersLayer) {
+    vaccinationsLayer.addTo(map);
+    vaccinationsMarkersLayer.addTo(map);
+  } else {
+    console.warn(`Layer for type "${type}" is not available.`);
+  }
 
   currentLayer = type;
 }
