@@ -117,6 +117,22 @@ function createHeatLayer(points, details, layerType) {
 }
 
 async function loadData() {
+  // Remove existing layers before loading new data
+  if (casesLayer) map.removeLayer(casesLayer);
+  if (casesMarkersLayer) map.removeLayer(casesMarkersLayer);
+  if (deathsLayer) map.removeLayer(deathsLayer);
+  if (deathsMarkersLayer) map.removeLayer(deathsMarkersLayer);
+  if (vaccinationsLayer) map.removeLayer(vaccinationsLayer);
+  if (vaccinationsMarkersLayer) map.removeLayer(vaccinationsMarkersLayer);
+
+  // Reset layer variables
+  casesLayer = null;
+  deathsLayer = null;
+  vaccinationsLayer = null;
+  casesMarkersLayer = null;
+  deathsMarkersLayer = null;
+  vaccinationsMarkersLayer = null;
+
   const endpoints = {
     cases: `${BASE_URL}/api/covid-cases?date=${encodeURIComponent(selectedDate)}`,
     deaths: `${BASE_URL}/api/covid-deaths?date=${encodeURIComponent(selectedDate)}`,
@@ -163,6 +179,7 @@ async function loadData() {
       vaccinationsMarkersLayer = markersLayer;
     }
 
+    // Automatically show the selected layer
     if (currentLayer) showLayer(currentLayer);
     else showLayer("cases");
   } catch (error) {
@@ -171,9 +188,15 @@ async function loadData() {
 }
 
 function showLayer(type) {
-  [casesLayer, deathsLayer, vaccinationsLayer].forEach((layer) => layer && map.removeLayer(layer));
-  [casesMarkersLayer, deathsMarkersLayer, vaccinationsMarkersLayer].forEach((layer) => layer && map.removeLayer(layer));
+  // Remove all existing layers
+  if (casesLayer) map.removeLayer(casesLayer);
+  if (casesMarkersLayer) map.removeLayer(casesMarkersLayer);
+  if (deathsLayer) map.removeLayer(deathsLayer);
+  if (deathsMarkersLayer) map.removeLayer(deathsMarkersLayer);
+  if (vaccinationsLayer) map.removeLayer(vaccinationsLayer);
+  if (vaccinationsMarkersLayer) map.removeLayer(vaccinationsMarkersLayer);
 
+  // Add the selected layer
   if (type === "cases" && casesLayer && casesMarkersLayer) {
     casesLayer.addTo(map);
     casesMarkersLayer.addTo(map);
@@ -185,9 +208,8 @@ function showLayer(type) {
     vaccinationsMarkersLayer.addTo(map);
   }
 
-  currentLayer = type;
+  currentLayer = type; // Update the current layer
 }
-
 function updateMonth(monthValue) {
   const [year, month] = monthValue.split("-");
   selectedDate = `${new Date(`${year}-${month}-01`).toLocaleString("default", { month: "long" })} ${year}`;
