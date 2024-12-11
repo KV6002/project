@@ -1,5 +1,8 @@
+import data from './circles.json' assert { type: 'json' };
+
 // Initialize the Leaflet map
 const map = L.map('map').setView([52.3555, -1.1743], 6); // Centered on the UK
+const avoidPolygons = data;
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
@@ -13,9 +16,16 @@ let toWaypoint = null;
 // Function to fetch and display route
 function fetchAndDisplayRoute() {
     if (fromWaypoint && toWaypoint) {
-        const url = `http://localhost:8080/ors/v2/directions/driving-car?&start=${fromWaypoint.toReversed().join(',')}&end=${toWaypoint.toReversed().join(',')}`;
-        
-        fetch(url)
+        const url = `http://188.166.174.131:8080/ors/v2/directions/driving-car`;
+        const body = {
+            coordinates: [fromWaypoint.toReversed(), toWaypoint.toReversed()],
+            options: { avoid_polygons: avoidPolygons }
+        };
+
+
+        fetch(url, {method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)})
             .then(res => res.json())
             .then(result => {
                 if (result.features && result.features.length > 0) {
