@@ -39,9 +39,15 @@ const geolocationMap = new Map([
 async function fetchData(endpoint) {
   const response = await fetch(endpoint);
   if (!response.ok) throw new Error(`Error fetching data: ${response.status}`);
-  return response.json();
-}
+  const data = await response.json();
 
+  // Ensure data has the expected structure
+  if (!Array.isArray(data)) {
+    console.warn("Fetched data is not in an array format:", data);
+    return [];
+  }
+  return data;
+}
 async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreData) {
   const points = [];
   const details = [];
@@ -54,12 +60,16 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
     if (!coordinates) return;
 
     const intensity = intensityFunction(item);
+
     const riskCategory = riskScoreData.find(
       (risk) => risk.region?.trim().toLowerCase() === region
-    )?.riskCategory || "Unknown";
+    )?.riskCategory || null;
 
-    points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
-    details.push({ region: item.Region, ...coordinates, value: item, riskCategory });
+    // Add only valid entries to points and details
+    if (riskCategory || item["Number of tests positive for COVID-19"] || item["Number of deaths"] || item["Number_received_three_vaccines"]) {
+      points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
+      details.push({ region: item.Region, ...coordinates, value: item, riskCategory });
+    }
   });
 
   return { points, details };
@@ -80,21 +90,28 @@ function createHeatLayer(points, details, layerType) {
     },
   });
 
-  const markersLayer = L.layerGroup(
-    details.map((detail) => {
-      const popupContent = `
-        <strong>Region:</strong> ${detail.region}<br>
-        <strong>${layerType === "cases" ? "Cases" : layerType === "deaths" ? "Deaths" : "Vaccinations"}:</strong> ${
-          detail.value["Number of tests positive for COVID-19"] ||
-          detail.value["Number of deaths"] ||
-          detail.value["Number_received_three_vaccines"] ||
-          "N/A"
-        }<br>
-        <strong>Risk Level:</strong> ${detail.riskCategory}
-      `;
-      return L.marker([detail.lat, detail.lng]).bindPopup(popupContent);
-    })
-  );
+  const markersLayer = L.layerGroup();
+
+  details.forEach((detail) => {
+    let popupContent = `<strong>Region:</strong> ${detail.region}<br>`;
+
+    // Validate data based on the layer type
+    if (layerType === "cases" && detail.value["Number of tests positive for COVID-19"]) {
+      popupContent += `<strong>Cases:</strong> ${detail.value["Number of tests positive for COVID-19"]}<br>`;
+    } else if (layerType === "deaths" && detail.value["Number of deaths"]) {
+      popupContent += `<strong>Deaths:</strong> ${detail.value["Number of deaths"]}<br>`;
+    } else if (layerType === "vaccinations" && detail.value["Number_received_three_vaccines"]) {
+      popupContent += `<strong>Vaccinations:</strong> ${detail.value["Number_received_three_vaccines"]}<br>`;
+    } else {
+      return; // Skip marker creation if data is missing
+    }
+
+    // Add risk category if available
+    popupContent += `<strong>Risk Level:</strong> ${detail.riskCategory || "Unknown"}`;
+
+    const marker = L.marker([detail.lat, detail.lng]).bindPopup(popupContent);
+    markersLayer.addLayer(marker);
+  });
 
   return { heatLayer, markersLayer };
 }
