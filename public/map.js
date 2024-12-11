@@ -15,6 +15,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 let casesLayer, deathsLayer, vaccinationsLayer;
 let casesMarkersLayer, deathsMarkersLayer, vaccinationsMarkersLayer;
+let riskScoreLayer, riskScoreMarkersLayer; // Added variables for risk scores
 let currentLayer = null;
 
 const now = new Date();
@@ -52,7 +53,7 @@ async function fetchData(endpoint) {
   }
 }
 
-async function loadCoordinatesForData(dataArray, intensityFunction) {
+async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreData) {
   const points = [];
   const details = [];
 
@@ -66,6 +67,12 @@ async function loadCoordinatesForData(dataArray, intensityFunction) {
     }
 
     const intensity = intensityFunction(item);
+
+    // Find the corresponding risk score for this region
+    const riskScore = riskScoreData.find(
+      (risk) => risk.Region.trim().toLowerCase() === region
+    )?.["Risk Score"] || "N/A";
+
     points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
 
     details.push({
@@ -73,6 +80,7 @@ async function loadCoordinatesForData(dataArray, intensityFunction) {
       lat: coordinates.lat,
       lng: coordinates.lng,
       value: item,
+      riskScore, // Add risk score to details
     });
   }
 
@@ -104,12 +112,15 @@ function createHeatLayer(points, details, layerType) {
 
     // Add specific data based on layer type
     if (layerType === "cases") {
-      popupContent += `<strong>Cases:</strong> ${detail.value["Number of tests positive for COVID-19"] || "N/A"}`;
+      popupContent += `<strong>Cases:</strong> ${detail.value["Number of tests positive for COVID-19"] || "N/A"}<br>`;
     } else if (layerType === "deaths") {
-      popupContent += `<strong>Deaths:</strong> ${detail.value["Number of deaths"] || "N/A"}`;
+      popupContent += `<strong>Deaths:</strong> ${detail.value["Number of deaths"] || "N/A"}<br>`;
     } else if (layerType === "vaccinations") {
-      popupContent += `<strong>Vaccinations:</strong> ${detail.value["Number_received_three_vaccines"] || "N/A"}`;
+      popupContent += `<strong>Vaccinations:</strong> ${detail.value["Number_received_three_vaccines"] || "N/A"}<br>`;
     }
+
+    // Add risk score
+    popupContent += `<strong>Risk Score:</strong> ${detail.riskScore}`;
 
     const marker = L.marker([detail.lat, detail.lng]).bindPopup(popupContent);
     markersLayer.addLayer(marker);
@@ -127,49 +138,42 @@ async function loadData() {
   };
 
   try {
+    const riskScoreData = await fetchData(endpoints.riskscore);
+
     const casesData = await fetchData(endpoints.cases);
     if (casesData.length > 0) {
       const { points: casesPoints, details: casesDetails } = await loadCoordinatesForData(
         casesData,
-        (item) => getCasesMonthlyInformationColour(item["Number of tests positive for COVID-19"])
+        (item) => getCasesMonthlyInformationColour(item["Number of tests positive for COVID-19"]),
+        riskScoreData
       );
       const { heatLayer, markersLayer } = createHeatLayer(casesPoints, casesDetails, "cases");
       casesLayer = heatLayer;
       casesMarkersLayer = markersLayer;
-    } else {
-      console.warn("No cases data available.");
-      casesLayer = null;
-      casesMarkersLayer = null;
     }
 
     const deathsData = await fetchData(endpoints.deaths);
     if (deathsData.length > 0) {
       const { points: deathsPoints, details: deathsDetails } = await loadCoordinatesForData(
         deathsData,
-        (item) => getDeathMonthlyInformationColour(item["Number of deaths"])
+        (item) => getDeathMonthlyInformationColour(item["Number of deaths"]),
+        riskScoreData
       );
       const { heatLayer, markersLayer } = createHeatLayer(deathsPoints, deathsDetails, "deaths");
       deathsLayer = heatLayer;
       deathsMarkersLayer = markersLayer;
-    } else {
-      console.warn("No deaths data available.");
-      deathsLayer = null;
-      deathsMarkersLayer = null;
     }
 
     const vaccinationsData = await fetchData(endpoints.vaccines);
     if (vaccinationsData.length > 0) {
       const { points: vaccinationsPoints, details: vaccinationsDetails } = await loadCoordinatesForData(
         vaccinationsData,
-        (item) => getVaccinationMonthlyInformationColour(item["Number_received_three_vaccines"])
+        (item) => getVaccinationMonthlyInformationColour(item["Number_received_three_vaccines"]),
+        riskScoreData
       );
       const { heatLayer, markersLayer } = createHeatLayer(vaccinationsPoints, vaccinationsDetails, "vaccinations");
       vaccinationsLayer = heatLayer;
       vaccinationsMarkersLayer = markersLayer;
-    } else {
-      console.warn("No vaccinations data available.");
-      vaccinationsLayer = null;
-      vaccinationsMarkersLayer = null;
     }
 
     if (currentLayer) {
