@@ -57,13 +57,12 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
   const details = [];
 
   for (const item of dataArray) {
-    // Check if the Region property exists
     if (!item.Region) {
       console.warn("Missing Region property in item:", item);
       continue;
     }
 
-    const region = item.Region.trim().toLowerCase();
+    const region = item.Region.trim().toLowerCase(); // Normalize region name
     const coordinates = geolocationMap.get(region);
 
     if (!coordinates) {
@@ -73,9 +72,10 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
 
     const intensity = intensityFunction(item);
 
-    // Find the corresponding risk level for this region
+    // Normalize region names in riskScoreData and find corresponding risk level
     const riskLevel = riskScoreData.find(
-      (risk) => risk.Region && risk.Region.trim().toLowerCase() === region
+      (risk) =>
+        risk.Region && risk.Region.trim().toLowerCase() === region // Normalize comparison
     )?.["Risk Level"] || "Unknown"; // Default to "Unknown" if missing
 
     points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
@@ -85,7 +85,7 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
       lat: coordinates.lat,
       lng: coordinates.lng,
       value: item,
-      riskLevel, // Add risk level to details
+      riskLevel, // Include normalized risk level
     });
   }
 
