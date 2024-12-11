@@ -117,7 +117,7 @@ async function loadData() {
     cases: `${BASE_URL}/api/covid-cases?date=${encodeURIComponent(selectedDate)}`,
     deaths: `${BASE_URL}/api/covid-deaths?date=${encodeURIComponent(selectedDate)}`,
     vaccines: `${BASE_URL}/api/covid-vaccines?date=${encodeURIComponent(selectedDate)}`,
-    riskscore: `${BASE_URL}/api/covid-riskScores?date=${encodeURIComponent(selectedDate)}`,
+    riskscore: `${BASE_URL}/api/covid-riskScore?date=${encodeURIComponent(selectedDate)}`,
   };
 
   try {
