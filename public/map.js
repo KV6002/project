@@ -15,7 +15,6 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 let casesLayer, deathsLayer, vaccinationsLayer;
 let casesMarkersLayer, deathsMarkersLayer, vaccinationsMarkersLayer;
-let riskScoreLayer, riskScoreMarkersLayer; // Added variables for risk scores
 let currentLayer = null;
 
 const now = new Date();
@@ -64,7 +63,7 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
       continue;
     }
 
-    const region = item.Region.trim().toLowerCase(); // Ensure Region exists before using trim()
+    const region = item.Region.trim().toLowerCase();
     const coordinates = geolocationMap.get(region);
 
     if (!coordinates) {
@@ -74,10 +73,10 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
 
     const intensity = intensityFunction(item);
 
-    // Find the corresponding risk score for this region
-    const riskScore = riskScoreData.find(
+    // Find the corresponding risk level for this region
+    const riskLevel = riskScoreData.find(
       (risk) => risk.Region && risk.Region.trim().toLowerCase() === region
-    )?.["Risk Score"] || "N/A";
+    )?.["Risk Level"] || "Unknown"; // Default to "Unknown" if missing
 
     points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
 
@@ -86,7 +85,7 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
       lat: coordinates.lat,
       lng: coordinates.lng,
       value: item,
-      riskScore, // Add risk score to details
+      riskLevel, // Add risk level to details
     });
   }
 
@@ -125,8 +124,8 @@ function createHeatLayer(points, details, layerType) {
       popupContent += `<strong>Vaccinations:</strong> ${detail.value["Number_received_three_vaccines"] || "N/A"}<br>`;
     }
 
-    // Add risk score
-    popupContent += `<strong>Risk Score:</strong> ${detail.riskScore}`;
+    // Add risk level
+    popupContent += `<strong>Risk Level:</strong> ${detail.riskLevel}`;
 
     const marker = L.marker([detail.lat, detail.lng]).bindPopup(popupContent);
     markersLayer.addLayer(marker);
@@ -140,7 +139,7 @@ async function loadData() {
     cases: `${BASE_URL}/api/covid-cases?date=${encodeURIComponent(selectedDate)}`,
     deaths: `${BASE_URL}/api/covid-deaths?date=${encodeURIComponent(selectedDate)}`,
     vaccines: `${BASE_URL}/api/covid-vaccines?date=${encodeURIComponent(selectedDate)}`,
-    riskscore: `${BASE_URL}/api/covid-riskScore?date=${encodeURIComponent(selectedDate)}`,
+    riskscore: `${BASE_URL}/api/covid-riskScores?date=${encodeURIComponent(selectedDate)}`,
   };
 
   try {
