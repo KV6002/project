@@ -4,8 +4,7 @@ import {
   getDeathMonthlyInformationColour,
 } from "./ColourCoordination.js";
 
-// Initialize the map
-const map = L.map("map").setView([52.3555, -1.1743], 6); // Centered on the UK
+const map = L.map("map").setView([52.3555, -1.1743], 6);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 18,
@@ -19,10 +18,8 @@ let currentLayer = null;
 
 const now = new Date();
 let selectedDate = `${now.toLocaleString("default", { month: "long" })} ${now.getFullYear()}`;
-
 const BASE_URL = "https://project-tan-nine-34.vercel.app";
 
-// Map of regions and their coordinates
 const geolocationMap = new Map([
   ["north east", { lat: 54.978, lng: -1.617 }],
   ["north west", { lat: 53.767623, lng: -2.703089 }],
@@ -39,15 +36,9 @@ const geolocationMap = new Map([
 async function fetchData(endpoint) {
   const response = await fetch(endpoint);
   if (!response.ok) throw new Error(`Error fetching data: ${response.status}`);
-  const data = await response.json();
-
-  // Ensure data has the expected structure
-  if (!Array.isArray(data)) {
-    console.warn("Fetched data is not in an array format:", data);
-    return [];
-  }
-  return data;
+  return response.json();
 }
+
 async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreData) {
   const points = [];
   const details = [];
@@ -60,12 +51,10 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
     if (!coordinates) return;
 
     const intensity = intensityFunction(item);
-
     const riskCategory = riskScoreData.find(
       (risk) => risk.region?.trim().toLowerCase() === region
-    )?.riskCategory || null;
+    )?.riskCategory || "Unknown";
 
-    // Add only valid entries to points and details
     if (riskCategory || item["Number of tests positive for COVID-19"] || item["Number of deaths"] || item["Number_received_three_vaccines"]) {
       points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
       details.push({ region: item.Region, ...coordinates, value: item, riskCategory });
@@ -90,34 +79,26 @@ function createHeatLayer(points, details, layerType) {
     },
   });
 
-  const markersLayer = L.layerGroup();
-
-  details.forEach((detail) => {
-    let popupContent = `<strong>Region:</strong> ${detail.region}<br>`;
-
-    // Validate data based on the layer type
-    if (layerType === "cases" && detail.value["Number of tests positive for COVID-19"]) {
-      popupContent += `<strong>Cases:</strong> ${detail.value["Number of tests positive for COVID-19"]}<br>`;
-    } else if (layerType === "deaths" && detail.value["Number of deaths"]) {
-      popupContent += `<strong>Deaths:</strong> ${detail.value["Number of deaths"]}<br>`;
-    } else if (layerType === "vaccinations" && detail.value["Number_received_three_vaccines"]) {
-      popupContent += `<strong>Vaccinations:</strong> ${detail.value["Number_received_three_vaccines"]}<br>`;
-    } else {
-      return; // Skip marker creation if data is missing
-    }
-
-    // Add risk category if available
-    popupContent += `<strong>Risk Level:</strong> ${detail.riskCategory || "Unknown"}`;
-
-    const marker = L.marker([detail.lat, detail.lng]).bindPopup(popupContent);
-    markersLayer.addLayer(marker);
-  });
+  const markersLayer = L.layerGroup(
+    details.map((detail) => {
+      const popupContent = `
+        <strong>Region:</strong> ${detail.region}<br>
+        <strong>${layerType === "cases" ? "Cases" : layerType === "deaths" ? "Deaths" : "Vaccinations"}:</strong> ${
+          detail.value["Number of tests positive for COVID-19"] ||
+          detail.value["Number of deaths"] ||
+          detail.value["Number_received_three_vaccines"] ||
+          "N/A"
+        }<br>
+        <strong>Risk Level:</strong> ${detail.riskCategory}
+      `;
+      return L.marker([detail.lat, detail.lng]).bindPopup(popupContent);
+    })
+  );
 
   return { heatLayer, markersLayer };
 }
 
 async function loadData() {
-  // Remove existing layers before loading new data
   if (casesLayer) map.removeLayer(casesLayer);
   if (casesMarkersLayer) map.removeLayer(casesMarkersLayer);
   if (deathsLayer) map.removeLayer(deathsLayer);
@@ -125,7 +106,6 @@ async function loadData() {
   if (vaccinationsLayer) map.removeLayer(vaccinationsLayer);
   if (vaccinationsMarkersLayer) map.removeLayer(vaccinationsMarkersLayer);
 
-  // Reset layer variables
   casesLayer = null;
   deathsLayer = null;
   vaccinationsLayer = null;
@@ -137,7 +117,7 @@ async function loadData() {
     cases: `${BASE_URL}/api/covid-cases?date=${encodeURIComponent(selectedDate)}`,
     deaths: `${BASE_URL}/api/covid-deaths?date=${encodeURIComponent(selectedDate)}`,
     vaccines: `${BASE_URL}/api/covid-vaccines?date=${encodeURIComponent(selectedDate)}`,
-    riskscore: `${BASE_URL}/api/covid-riskScore?date=${encodeURIComponent(selectedDate)}`,
+    riskscore: `${BASE_URL}/api/covid-riskScores?date=${encodeURIComponent(selectedDate)}`,
   };
 
   try {
@@ -179,7 +159,6 @@ async function loadData() {
       vaccinationsMarkersLayer = markersLayer;
     }
 
-    // Automatically show the selected layer
     if (currentLayer) showLayer(currentLayer);
     else showLayer("cases");
   } catch (error) {
@@ -188,7 +167,6 @@ async function loadData() {
 }
 
 function showLayer(type) {
-  // Remove all existing layers
   if (casesLayer) map.removeLayer(casesLayer);
   if (casesMarkersLayer) map.removeLayer(casesMarkersLayer);
   if (deathsLayer) map.removeLayer(deathsLayer);
@@ -196,7 +174,6 @@ function showLayer(type) {
   if (vaccinationsLayer) map.removeLayer(vaccinationsLayer);
   if (vaccinationsMarkersLayer) map.removeLayer(vaccinationsMarkersLayer);
 
-  // Add the selected layer
   if (type === "cases" && casesLayer && casesMarkersLayer) {
     casesLayer.addTo(map);
     casesMarkersLayer.addTo(map);
@@ -208,8 +185,9 @@ function showLayer(type) {
     vaccinationsMarkersLayer.addTo(map);
   }
 
-  currentLayer = type; // Update the current layer
+  currentLayer = type;
 }
+
 function updateMonth(monthValue) {
   const [year, month] = monthValue.split("-");
   selectedDate = `${new Date(`${year}-${month}-01`).toLocaleString("default", { month: "long" })} ${year}`;
@@ -219,5 +197,4 @@ function updateMonth(monthValue) {
 window.showLayer = showLayer;
 window.updateMonth = updateMonth;
 
-// Load data when the page loads
 loadData();
