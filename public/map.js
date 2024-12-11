@@ -62,7 +62,7 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
       continue;
     }
 
-    const region = item.Region.trim().toLowerCase(); // Normalize region name
+    const region = item.Region.trim().toLowerCase();
     const coordinates = geolocationMap.get(region);
 
     if (!coordinates) {
@@ -72,11 +72,11 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
 
     const intensity = intensityFunction(item);
 
-    // Normalize region names in riskScoreData and find corresponding risk level
-    const riskLevel = riskScoreData.find(
+    // Find corresponding risk category from riskScoreData
+    const riskCategory = riskScoreData.find(
       (risk) =>
-        risk.Region && risk.Region.trim().toLowerCase() === region // Normalize comparison
-    )?.["Risk Level"] || "Unknown"; // Default to "Unknown" if missing
+        risk.region && risk.region.trim().toLowerCase() === region
+    )?.["riskCategory"] || "Unknown"; // Default to "Unknown" if missing
 
     points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
 
@@ -85,7 +85,7 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
       lat: coordinates.lat,
       lng: coordinates.lng,
       value: item,
-      riskLevel, // Include normalized risk level
+      riskCategory, // Add risk category
     });
   }
 
@@ -124,8 +124,8 @@ function createHeatLayer(points, details, layerType) {
       popupContent += `<strong>Vaccinations:</strong> ${detail.value["Number_received_three_vaccines"] || "N/A"}<br>`;
     }
 
-    // Add risk level
-    popupContent += `<strong>Risk Level:</strong> ${detail.riskLevel}`;
+    // Add risk category
+    popupContent += `<strong>Risk Level:</strong> ${detail.riskCategory}`;
 
     const marker = L.marker([detail.lat, detail.lng]).bindPopup(popupContent);
     markersLayer.addLayer(marker);
@@ -139,7 +139,7 @@ async function loadData() {
     cases: `${BASE_URL}/api/covid-cases?date=${encodeURIComponent(selectedDate)}`,
     deaths: `${BASE_URL}/api/covid-deaths?date=${encodeURIComponent(selectedDate)}`,
     vaccines: `${BASE_URL}/api/covid-vaccines?date=${encodeURIComponent(selectedDate)}`,
-    riskscore: `${BASE_URL}/api/covid-riskScore?date=${encodeURIComponent(selectedDate)}`,
+    riskscore: `${BASE_URL}/api/covid-riskScores?date=${encodeURIComponent(selectedDate)}`,
   };
 
   try {
