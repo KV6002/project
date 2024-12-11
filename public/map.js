@@ -58,7 +58,13 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
   const details = [];
 
   for (const item of dataArray) {
-    const region = item.Region.trim().toLowerCase();
+    // Check if the Region property exists
+    if (!item.Region) {
+      console.warn("Missing Region property in item:", item);
+      continue;
+    }
+
+    const region = item.Region.trim().toLowerCase(); // Ensure Region exists before using trim()
     const coordinates = geolocationMap.get(region);
 
     if (!coordinates) {
@@ -70,7 +76,7 @@ async function loadCoordinatesForData(dataArray, intensityFunction, riskScoreDat
 
     // Find the corresponding risk score for this region
     const riskScore = riskScoreData.find(
-      (risk) => risk.Region.trim().toLowerCase() === region
+      (risk) => risk.Region && risk.Region.trim().toLowerCase() === region
     )?.["Risk Score"] || "N/A";
 
     points.push([coordinates.lat, coordinates.lng, Math.max(intensity, 0.1)]);
