@@ -1,59 +1,58 @@
 const sinon = require('sinon');
-const { expect } = require('chai');  // Ensure you import Chai for assertions
-const dbOperations = require('../riskLevels/dbOperations'); // Path to your dbOperations.js file
+const { expect } = require('chai'); // Import Chai for assertions
+const dbOperations = require('../riskLevels/dbOperations'); // Path to dbOperations module
 const client = require('../db'); // MongoDB client module
 
-describe('dbOperations', function() {
+describe('dbOperations', function () {
     let dbMock;
     let collectionMock;
 
-    // This runs before each test
+    // Runs before each test to set up mocks
     beforeEach(() => {
-        // Create mocks for MongoDB client, db, and collections
         collectionMock = {
             find: sinon.stub().returns({
-                toArray: sinon.stub().resolves([]) // Mock toArray to return an empty array by default
-            })
-        };
-        dbMock = {
-            collection: sinon.stub().returns(collectionMock)
+                toArray: sinon.stub().resolves([]), // Mock toArray to return an empty array by default
+            }),
         };
 
-        // Replace client.db() with our mock
+        dbMock = {
+            collection: sinon.stub().returns(collectionMock),
+        };
+
+        // Mock the client.db() method
         sinon.stub(client, 'db').returns(dbMock);
     });
 
-    // This runs after each test to restore the original method
+    // Runs after each test to restore the original methods
     afterEach(() => {
-        sinon.restore();  // Restore the original db method
+        sinon.restore(); // Restore all stubs
     });
 
-    describe('fetchCasesData', function() {
-        it('should fetch cases data correctly', async function() {
-            // Prepare mock data for cases
+    describe('fetchCasesData', function () {
+        it('should fetch cases data correctly', async function () {
+            // Mock data for cases
             collectionMock.find.returns({
                 toArray: sinon.stub().resolves([
-                    { Region: 'North East', 'Number of tests positive for COVID-19': 100 }
-                ])
+                    { Region: 'North East', 'Number of tests positive for COVID-19': 100 },
+                ]),
             });
 
             const result = await dbOperations.fetchCasesData();
 
-            // Assert that the returned data matches the expected structure
+            // Assert the result matches expectations
             expect(result).to.be.an('array').that.is.not.empty;
             expect(result[0].Region).to.equal('North East');
             expect(result[0]['Number of tests positive for COVID-19']).to.equal(100);
         });
 
-        it('should handle errors and throw', async function() {
-            // Simulate an error when calling toArray
+        it('should handle errors and throw', async function () {
+            // Simulate an error in toArray
             collectionMock.find.returns({
-                toArray: sinon.stub().rejects(new Error('Database error'))
+                toArray: sinon.stub().rejects(new Error('Database error')),
             });
 
             try {
                 await dbOperations.fetchCasesData();
-                // If we get here, the test should fail
                 throw new Error('Test should have thrown an error');
             } catch (error) {
                 expect(error.message).to.equal('Database error');
@@ -61,24 +60,27 @@ describe('dbOperations', function() {
         });
     });
 
-    describe('fetchVaccineData', function() {
-        it('should fetch vaccine data correctly', async function() {
+    describe('fetchVaccineData', function () {
+        it('should fetch vaccine data correctly', async function () {
+            // Mock data for vaccines
             collectionMock.find.returns({
                 toArray: sinon.stub().resolves([
-                    { Region: 'North East', 'Vaccine Doses Administered': 5000 }
-                ])
+                    { Region: 'North East', 'Vaccine Doses Administered': 5000 },
+                ]),
             });
 
             const result = await dbOperations.fetchVaccineData();
 
+            // Assert the result matches expectations
             expect(result).to.be.an('array').that.is.not.empty;
             expect(result[0].Region).to.equal('North East');
             expect(result[0]['Vaccine Doses Administered']).to.equal(5000);
         });
 
-        it('should handle errors and throw', async function() {
+        it('should handle errors and throw', async function () {
+            // Simulate an error in toArray
             collectionMock.find.returns({
-                toArray: sinon.stub().rejects(new Error('Database error'))
+                toArray: sinon.stub().rejects(new Error('Database error')),
             });
 
             try {
@@ -90,24 +92,27 @@ describe('dbOperations', function() {
         });
     });
 
-    describe('fetchDeathsData', function() {
-        it('should fetch deaths data correctly', async function() {
+    describe('fetchDeathsData', function () {
+        it('should fetch deaths data correctly', async function () {
+            // Mock data for deaths
             collectionMock.find.returns({
                 toArray: sinon.stub().resolves([
-                    { Region: 'North East', 'Number of Deaths': 150 }
-                ])
+                    { Region: 'North East', 'Number of Deaths': 150 },
+                ]),
             });
 
             const result = await dbOperations.fetchDeathsData();
 
+            // Assert the result matches expectations
             expect(result).to.be.an('array').that.is.not.empty;
             expect(result[0].Region).to.equal('North East');
             expect(result[0]['Number of Deaths']).to.equal(150);
         });
 
-        it('should handle errors and throw', async function() {
+        it('should handle errors and throw', async function () {
+            // Simulate an error in toArray
             collectionMock.find.returns({
-                toArray: sinon.stub().rejects(new Error('Database error'))
+                toArray: sinon.stub().rejects(new Error('Database error')),
             });
 
             try {
