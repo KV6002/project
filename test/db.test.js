@@ -6,7 +6,7 @@ describe('Database Client', () => {
   };
 
   before(() => {
-    // Set NODE_ENV to 'test' to bypass dotenv
+   
     process.env.NODE_ENV = 'test';
   });
 

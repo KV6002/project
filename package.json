@@ -4,15 +4,16 @@
   "description": "link to website: https://KV6002.github.io/project/dashboard/",
   "main": "index.js",
   "scripts": {
-  "start": "node server.js",
-  "test": "mocha test/*.test.js",
-  "build": "echo 'No build needed for this project'"
-},
+    "start": "node server.js",
+    "test": "mocha test/*.test.js",
+    "build": "echo 'No build needed for this project'"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.7.8",
+    "chai": "^5.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",

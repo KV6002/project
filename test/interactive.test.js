@@ -17,9 +17,9 @@ describe("Interactive Map Unit Test", () => {
       on: onMock,
     };
 
-    // Simulate global map initialization
+  
     global.initializeMap = function initializeMap() {
-      // Example setup for the map
+     
       return mapMock;
     };
 
@@ -27,7 +27,6 @@ describe("Interactive Map Unit Test", () => {
   });
 
   beforeEach(() => {
-    // Reset mocks before each test
     setViewMock.reset();
     fitBoundsMock.reset();
     onMock.reset();
