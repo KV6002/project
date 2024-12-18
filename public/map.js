@@ -3,14 +3,83 @@ import {
   getCasesMonthlyInformationColour,
   getDeathMonthlyInformationColour,
 } from "./ColourCoordination.js";
+import areas from "./routeAreas.json";
 
 const map = L.map("map").setView([52.3555, -1.1743], 6);
 
+var myAPIKey = "6e8dbb26e95e4992baa404893d4d2892"; // geoapify key
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 18,
   minZoom: 4,
   attribution: "© OpenStreetMap contributors",
 }).addTo(map);
+
+// Variables to store waypoints
+let fromWaypoint = null;
+let toWaypoint = null;
+
+
+// Function to fetch and display route
+function fetchAndDisplayRoute() {
+  if(fromWaypoint && toWaypoint) {
+      const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint},${toWaypoint}&mode=drive&avoid_areas=${encodeURIComponent(JSON.stringify(areas))}&apiKey=${myAPIKey}`;
+
+      fetch(url)
+            .then(res => res.json())
+            .then(result => {
+                if (result.features && result.features.length > 0) {
+                    const routeFeature = result.features[0];
+
+                    L.geoJSON(routeFeature, {
+                        style: {
+                            color: "rgba(20, 137, 255, 0.7)",
+                            weight: 5
+                        }
+                    })
+                    .bindPopup(layer => {
+                        const { distance, distance_units, time } = routeFeature.properties;
+                        return `${distance} ${distance_units}, ${time}`;
+                    })
+                    .addTo(map);
+                } else {
+                    console.log("No route data found.");
+                }
+            })
+            .catch(error => console.log("Error fetching route data:", error));
+    }
+}
+
+// Event listener to set waypoints on map click
+map.on('click', (event) => {
+  const { lat, lng } = event.latlng;
+
+  if (!fromWaypoint) {
+      // Set fromWaypoint on first click
+      fromWaypoint = [lat, lng];
+      L.marker(fromWaypoint).addTo(map).bindPopup("Start Point").openPopup();
+      console.log("Start point set:", fromWaypoint);
+  } else if (!toWaypoint) {
+      // Set toWaypoint on second click
+      toWaypoint = [lat, lng];
+      L.marker(toWaypoint).addTo(map).bindPopup("End Point").openPopup();
+      console.log("End point set:", toWaypoint);
+
+      // Fetch and display the route once both waypoints are set
+      fetchAndDisplayRoute();
+  } else {
+      // Reset waypoints if user wants to start over
+      fromWaypoint = [lat, lng];
+      toWaypoint = null;
+      map.eachLayer(layer => {
+          if (layer instanceof L.Marker || layer instanceof L.GeoJSON) {
+              map.removeLayer(layer);
+          }
+      });
+      L.marker(fromWaypoint).addTo(map).bindPopup("Start Point").openPopup();
+      console.log("Start point reset:", fromWaypoint);
+      
+  }
+});
 
 let casesLayer, deathsLayer, vaccinationsLayer;
 let casesMarkersLayer, deathsMarkersLayer, vaccinationsMarkersLayer;
